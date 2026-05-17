@@ -1,0 +1,8 @@
+
+ssh keys under:
+gitops-platform 
+
+bucket  = "gitops-platform-tfstate-921876749389"
+key     = "global/terraform.tfstate"
+region  = "eu-central-1"
+dynamo  = "gitops-platform-tf-lock"

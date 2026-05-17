@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AWS Infrastructure Diagram</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Bebas+Neue&display=swap');
+
+  :root {
+    --bg: #080C10;
+    --surface: #0D1117;
+    --border: #1E2A36;
+    --text: #C9D1D9;
+    --muted: #484F58;
+    --aws-orange: #FF9900;
+    --vpc-blue: #1A3A5C;
+    --pub-green: #0D2A1A;
+    --priv-red: #2A0D0D;
+    --cyan: #00D4FF;
+    --green: #39D353;
+    --yellow: #F0B429;
+    --red: #FF6B6B;
+    --purple: #9B5DE5;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  header {
+    padding: 24px 32px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 16px;
+    background: linear-gradient(180deg, #0D1520 0%, var(--bg) 100%);
+  }
+
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    letter-spacing: 0.08em;
+    color: var(--aws-orange);
+  }
+
+  .subtitle {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .legend {
+    display: flex;
+    gap: 20px;
+    padding: 12px 32px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+    background: var(--surface);
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .legend-dot {
+    width: 10px; height: 10px; border-radius: 1px;
+  }
+
+  .diagram-wrap {
+    padding: 32px;
+    overflow-x: auto;
+  }
+
+  svg {
+    display: block;
+    overflow: visible;
+  }
+
+  /* Tooltip */
+  .tooltip {
+    position: fixed;
+    background: #0D1117;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--aws-orange);
+    padding: 12px 16px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--text);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 100;
+    max-width: 280px;
+    line-height: 1.7;
+  }
+
+  .tooltip.visible { opacity: 1; }
+  .tooltip-title { color: var(--aws-orange); font-weight: 600; margin-bottom: 4px; font-size: 12px; }
+  .tooltip-tf { color: #A78BFA; margin-top: 6px; font-size: 10px; }
+
+  /* Terraform panel */
+  .tf-panel {
+    margin: 0 32px 32px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+  }
+
+  .tf-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-top: 2px solid var(--purple);
+    padding: 16px;
+    border-radius: 2px;
+  }
+
+  .tf-card h3 {
+    font-size: 11px;
+    color: var(--purple);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .tf-resource {
+    font-size: 11px;
+    color: var(--muted);
+    padding: 3px 0;
+    border-bottom: 1px solid #111822;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .tf-resource::before {
+    content: '';
+    width: 4px; height: 4px;
+    background: var(--purple);
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .tf-resource span { color: var(--text); }
+
+  /* Hover glow on SVG nodes */
+  .node-group { cursor: pointer; }
+  .node-group:hover .node-rect { filter: brightness(1.3); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>AWS Infrastructure</h1>
+  <span class="subtitle">Production GitOps Platform · Phase 1 Blueprint</span>
+</header>
+
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#1A4A7A;border:1px solid #2A6AAA"></div> VPC</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#0D3A1A;border:1px solid #1A6A2A"></div> Public Subnet</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#3A0D0D;border:1px solid #6A1A1A"></div> Private Subnet</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#2A2A0D;border:1px solid #5A5A1A"></div> Data Layer</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#FF9900;"></div> AWS Service</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#00D4FF;"></div> Traffic Flow</div>
+  <div class="legend-item" style="cursor:pointer;color:#C9D1D9;">← hover nodes for Terraform resource</div>
+</div>
+
+<div class="diagram-wrap">
+<svg id="diagram" width="960" height="780" viewBox="0 0 960 780">
+  <defs>
+    <!-- Arrow markers -->
+    <marker id="arrow-cyan" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#00D4FF"/>
+    </marker>
+    <marker id="arrow-orange" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#FF9900"/>
+    </marker>
+    <marker id="arrow-green" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#39D353"/>
+    </marker>
+    <marker id="arrow-red" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#FF6B6B"/>
+    </marker>
+    <marker id="arrow-purple" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#9B5DE5"/>
+    </marker>
+
+    <!-- Filters -->
+    <filter id="glow-orange">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow-cyan">
+      <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+
+    <!-- Grid pattern -->
+    <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse">
+      <path d="M 20 0 L 0 0 0 20" fill="none" stroke="#0D1520" stroke-width="0.5"/>
+    </pattern>
+  </defs>
+
+  <!-- Background grid -->
+  <rect width="960" height="780" fill="url(#grid)"/>
+
+  <!-- ═══════════════════════════════════ -->
+  <!-- AWS REGION label -->
+  <!-- ═══════════════════════════════════ -->
+  <text x="20" y="22" font-family="'Bebas Neue'" font-size="13" fill="#FF9900" letter-spacing="3" opacity="0.7">AWS REGION: eu-central-1</text>
+
+  <!-- ═══════════════════════════════════ -->
+  <!-- VPC boundary -->
+  <!-- ═══════════════════════════════════ -->
+  <rect x="20" y="32" width="740" height="730" rx="4"
+        fill="#0A1520" stroke="#1A4A7A" stroke-width="1.5" stroke-dasharray="6,3"/>
+  <text x="30" y="52" font-family="'IBM Plex Mono'" font-size="10" fill="#2A6AAA" letter-spacing="2">VPC  10.0.0.0/16</text>
+
+  <!-- ═══════════════════════════════════ -->
+  <!-- AZ-1a  (left column) -->
+  <!-- ═══════════════════════════════════ -->
+  <text x="36" y="76" font-family="'IBM Plex Mono'" font-size="9" fill="#484F58" letter-spacing="1">AVAILABILITY ZONE: eu-central-1a</text>
+
+  <!-- Public Subnet 1a -->
+  <rect x="32" y="84" width="320" height="160" rx="3"
+        fill="#0A1E0F" stroke="#1A5A24" stroke-width="1" stroke-dasharray="4,2"/>
+  <text x="42" y="100" font-family="'IBM Plex Mono'" font-size="9" fill="#1A6A2A" letter-spacing="1">PUBLIC SUBNET  10.0.1.0/24</text>
+
+  <!-- Internet Gateway node -->
+  <g class="node-group"
+     data-title="Internet Gateway"
+     data-desc="Entry point for all internet traffic into the VPC. Attached to the VPC, routes 0.0.0.0/0."
+     data-tf="aws_internet_gateway.main">
+    <rect x="44" y="108" width="120" height="48" rx="3" fill="#0D2A10" stroke="#39D353" stroke-width="1.5" class="node-rect"/>
+    <text x="104" y="128" font-family="'IBM Plex Mono'" font-size="9" fill="#39D353" text-anchor="middle" font-weight="600">Internet GW</text>
+    <text x="104" y="143" font-family="'IBM Plex Mono'" font-size="8" fill="#484F58" text-anchor="middle">igw-xxxxxxxx</text>
+  </g>
+
+  <!-- NAT Gateway node -->
+  <g class="node-group"
+     data-title="NAT Gateway"
+     data-desc="Allows private subnet instances to reach the internet (for apt-get, ECR pulls) without being reachable from outside. Requires an Elastic IP."
+     data-tf="aws_nat_gateway.main + aws_eip.nat">
+    <rect x="196" y="108" width="120" height="48" rx="3" fill="#0D2A10" stroke="#39D353" stroke-width="1.5" class="node-rect"/>
+    <text x="256" y="128" font-family="'IBM Plex Mono'" font-size="9" fill="#39D353" text-anchor="middle" font-weight="600">NAT Gateway</text>
+    <text x="256" y="143" font-family="'IBM Plex Mono'" font-size="8" fill="#484F58" text-anchor="middle">+ Elastic IP</text>
+  </g>
+
+  <!-- Bastion EC2 -->
+  <g class="node-group"
+     data-title="Bastion Host (EC2)"
+     data-desc="The ONLY SSH entry point. You SSH into bastion, then SSH from bastion into private EC2s. Also where Ansible runs from (or tunnels through)."
+     data-tf="aws_instance.bastion + aws_security_group.bastion_sg">
+    <rect x="44" y="180" width="270" height="52" rx="3" fill="#102A10" stroke="#F0B429" stroke-width="1.5" class="node-rect"/>
+    <text x="179" y="200" font-family="'IBM Plex Mono'" font-size="9" fill="#F0B429" text-anchor="middle" font-weight="600">Bastion Host  t3.micro</text>
+    <text x="179" y="215" font-family="'IBM Plex Mono'" font-size="8" fill="#484F58" text-anchor="middle">SG: allow 22 from YOUR_IP only</text>
+  </g>
+
+  <!-- ALB node -->
+  <rect x="32" y="258" width="320" height="72" rx="3"
+        fill="#0A1E0F" stroke="#1A5A24" stroke-width="1" stroke-dasharray="4,2"/>
+  <text x="42" y="274" font-family="'IBM Plex Mono'" font-size="9" fill="#1A6A2A" letter-spacing="1">PUBLIC SUBNET  10.0.2.0/24  (AZ-1b)</text>
+
+  <g class="node-group"
+     data-title="Application Load Balancer"
+     data-desc="Receives HTTP/HTTPS traffic from internet. Forwards to Target Group pointing at private app servers (or EKS NodePort). Terminates TLS."
+     data-tf="aws_lb.main + aws_lb_listener.http + aws_lb_target_group.app">
+    <rect x="44" y="282" width="296" height="36" rx="3" fill="#0D2A10" stroke="#00D4FF" stroke-width="1.5" class="node-rect"/>
+    <text x="192" y="300" font-family="'IBM Plex Mono'" font-size="9" fill="#00D4FF" text-anchor="middle" font-weight="600">Application Load Balancer (ALB)</text>
+    <text x="192" y="313" font-family="'IBM Plex Mono'" font-size="8" fill="#484F58" text-anchor="middle">443 → target group → private :8080</text>
+  </g>
+
+  <!-- Private Subnet -->
+  <rect x="32" y="344" width="320" height="310" rx="3"
+        fill="#1A0A0A" stroke="#5A1A1A" stroke-width="1" stroke-dasharray="4,2"/>
+  <text x="42" y="360" font-family="'IBM Plex Mono'" font-size="9" fill="#6A1A1A" letter-spacing="1">PRIVATE SUBNET  10.0.10.0/24</text>
+
+  <!-- App Server 1 -->
+  <g class="node-group"
+     data-title="App Server 1 (EC2)"
+     data-desc="Runs Docker / EKS worker node. In private subnet — no public IP. Reached via ALB or through Bastion SSH tunnel. Ansible configures this."
+     data-tf="aws_instance.app[0] + aws_security_group.app_sg">
+    <rect x="44" y="368" width="130" height="70" rx="3" fill="#2A1010" stroke="#FF6B6B" stroke-width="1.5" class="node-rect"/>
+    <text x="109" y="388" font-family="'IBM Plex Mono'" font-size="9" fill="#FF6B6B" text-anchor="middle" font-weight="600">App Server 1</text>
+    <text x="109" y="402" font-family="'IBM Plex Mono'" font-size="8" fill="#484F58" text-anchor="middle">t3.medium</text>
+    <text x="109" y="416" font-family="'IBM Plex Mono'" font-size="8" fill="#484F58" text-anchor="middle">10.0.10.10</text>
+    <text x="109" y="430" font-family="'IBM Plex Mono'" font-size="8" fill="#39D353" text-anchor="middle">Docker + Nginx</text>
+  </g>
+
+  <!-- App Server 2 -->
+  <g class="node-group"
+     data-title="App Server 2 (EC2)"
+     data-desc="Second app node for HA. Same config as Server 1, provisioned with count=2 in Terraform. Ansible runs against both via inventory."
+     data-tf="aws_instance.app[1]">
+    <rect x="210" y="368" width="130" height="70" rx="3" fill="#2A1010" stroke="#FF6B6B" stroke-width="1.5" class="node-rect"/>
+    <text x="275" y="388" font-family="'IBM Plex Mono'" font-size="9" fill="#FF6B6B" text-anchor="middle" font-weight="600">App Server 2</text>
+    <text x="275" y="402" font-family="'IBM Plex Mono'" font-size="8" fill="#484F58" text-anchor="middle">t3.medium</text>
+    <text x="275" y="416" font-family="'IBM Plex Mono'" font-size="8" fill="#484F58" text-anchor="middle">10.0.10.11</text>
+    <text x="275" y="430" font-family="'IBM Plex Mono'" font-size="8" fill="#39D353" text-anchor="middle">Docker + Nginx</text>
+  </g>
+
+  <!-- EKS Control Plane box -->
+  <g class="node-group"
+     data-title="EKS Control Plane"
+     data-desc="AWS-managed Kubernetes masters. You don't see these servers — AWS runs them. You interact via kubectl. Worker nodes run in your private subnet."
+     data-tf="aws_eks_cluster.main + aws_eks_node_group.workers">
+    <rect x="44" y="456" width="296" height="52" rx="3" fill="#1A1030" stroke="#9B5DE5" stroke-width="1.5" class="node-rect"/>
+    <text x="192" y="477" font-family="'IBM Plex Mono'" font-size="9" fill="#9B5DE5" text-anchor="middle" font-weight="600">EKS Cluster (managed control plane)</text>
+    <text x="192" y="492" font-family="'IBM Plex Mono'" font-size="8" fill="#484F58" text-anchor="middle">Worker nodes → same private subnet</text>
+  </g>
+
+  <!-- Security Groups legend box -->
+  <rect x="44" y="522" width="296" height="116" rx="3" fill="#0D0D14" stroke="#2A2A3A" stroke-width="1"/>
+  <text x="54" y="540" font-family="'IBM Plex Mono'" font-size="9" fill="#484F58" letter-spacing="1">SECURITY GROUPS</text>
+  <text x="54" y="558" font-family="'IBM Plex Mono'" font-size="9" fill="#F0B429">bastion_sg:</text>
+  <text x="148" y="558" font-family="'IBM Plex Mono'" font-size="9" fill="#484F58">  inbound 22 from YOUR_IP</text>
+  <text x="54" y="573" font-family="'IBM Plex Mono'" font-size="9" fill="#F0B429">alb_sg:</text>
+  <text x="148" y="573" font-family="'IBM Plex Mono'" font-size="9" fill="#484F58">     inbound 443/80 from 0.0.0.0/0</text>
+  <text x="54" y="588" font-family="'IBM Plex Mono'" font-size="9" fill="#F0B429">app_sg:</text>
+  <text x="148" y="588" font-family="'IBM Plex Mono'" font-size="9" fill="#484F58">     inbound 8080 from alb_sg</text>
+  <text x="148" y="603" font-family="'IBM Plex Mono'" font-size="9" fill="#484F58">     inbound 22 from bastion_sg</text>
+  <text x="54" y="618" font-family="'IBM Plex Mono'" font-size="9" fill="#F0B429">db_sg:</text>
+  <text x="148" y="618" font-family="'IBM Plex Mono'" font-size="9" fill="#484F58">      inbound 5432 from app_sg</text>
+  <text x="54" y="633" font-family="'IBM Plex Mono'" font-size="9" fill="#484F58">      (RDS never reachable from internet)</text>
+
+  <!-- ═══════════════════════════════════ -->
+  <!-- DATA SUBNET (bottom) -->
+  <!-- ═══════════════════════════════════ -->
+  <rect x="32" y="666" width="320" height="80" rx="3"
+        fill="#1A1A0A" stroke="#4A4A1A" stroke-width="1" stroke-dasharray="4,2"/>
+  <text x="42" y="682" font-family="'IBM Plex Mono'" font-size="9" fill="#5A5A1A" letter-spacing="1">DATA SUBNET  10.0.20.0/24  (isolated)</text>
+
+  <!-- RDS -->
+  <g class="node-group"
+     data-title="RDS PostgreSQL (Multi-AZ)"
+     data-desc="Managed Postgres. Primary in 1a, standby in 1b. Only reachable from app_sg on port 5432. Automated backups to S3."
+     data-tf="aws_db_instance.postgres + aws_db_subnet_group.main">
+    <rect x="44" y="692" width="130" height="44" rx="3" fill="#2A2A08" stroke="#F0B429" stroke-width="1.5" class="node-rect"/>
+    <text x="109" y="710" font-family="'IBM Plex Mono'" font-size="9" fill="#F0B429" text-anchor="middle" font-weight="600">RDS Postgres</text>
+    <text x="109" y="725" font-family="'IBM Plex Mono'" font-size="8" fill="#484F58" text-anchor="middle">db.t3.medium · Multi-AZ</text>
+  </g>
+
+  <!-- ElastiCache (optional) -->
+  <g class="node-group"
+     data-title="ElastiCache Redis (optional)"
+     data-desc="Session cache / queue backend. Same data subnet, only reachable from app_sg on 6379. Optional for Phase 1."
+     data-tf="aws_elasticache_cluster.redis (optional)">
+    <rect x="210" y="692" width="130" height="44" rx="3" fill="#1A0A2A" stroke="#9B5DE5" stroke-width="1.5" class="node-rect"/>
+    <text x="275" y="710" font-family="'IBM Plex Mono'" font-size="9" fill="#9B5DE5" text-anchor="middle" font-weight="600">Redis (optional)</text>
+    <text x="275" y="725" font-family="'IBM Plex Mono'" font-size="8" fill="#484F58" text-anchor="middle">ElastiCache · 6379</text>
+  </g>
+
+  <!-- ═══════════════════════════════════ -->
+  <!-- AWS SERVICES (right column) -->
+  <!-- ═══════════════════════════════════ -->
+  <text x="786" y="52" font-family="'IBM Plex Mono'" font-size="9" fill="#484F58" letter-spacing="1">AWS MANAGED SERVICES</text>
+
+  <!-- S3 -->
+  <g class="node-group"
+     data-title="S3 Buckets"
+     data-desc="3 buckets: (1) terraform-state — remote backend with versioning. (2) app-assets — static files. (3) alb-logs — access logs. All private, encrypted."
+     data-tf="aws_s3_bucket.terraform_state + aws_s3_bucket.app_assets">
+    <rect x="778" y="64" width="164" height="56" rx="3" fill="#1A1206" stroke="#FF9900" stroke-width="1.5" class="node-rect"/>
+    <text x="860" y="84" font-family="'IBM Plex Mono'" font-size="10" fill="#FF9900" text-anchor="middle" font-weight="600">S3</text>
+    <text x="860" y="99" font-family="'IBM Plex Mono'" font-size="8" fill="#484F58" text-anchor="middle">tf-state · app-assets</text>
+    <text x="860" y="113" font-family="'IBM Plex Mono'" font-size="8" fill="#484F58" text-anchor="middle">versioning + encryption</text>
+  </g>
+
+  <!-- DynamoDB -->
+  <g class="node-group"
+     data-title="DynamoDB — TF State Lock"
+     data-desc="Single table used by Terraform as a state lock. Prevents two people running terraform apply at the same time. LockID is the partition key."
+     data-tf="aws_dynamodb_table.tf_lock">
+    <rect x="778" y="136" width="164" height="44" rx="3" fill="#1A1206" stroke="#FF9900" stroke-width="1.5" class="node-rect"/>
+    <text x="860" y="155" font-family="'IBM Plex Mono'" font-size="10" fill="#FF9900" text-anchor="middle" font-weight="600">DynamoDB</text>
+    <text x="860" y="170" font-family="'IBM Plex Mono'" font-size="8" fill="#484F58" text-anchor="middle">TF state lock table</text>
+  </g>
+
+  <!-- ECR -->
+  <g class="node-group"
+     data-title="ECR — Container Registry"
+     data-desc="Private Docker registry. GitHub Actions authenticates with OIDC (no stored keys), builds and pushes images tagged with Git SHA. EKS pulls from here."
+     data-tf="aws_ecr_repository.app">
+    <rect x="778" y="196" width="164" height="44" rx="3" fill="#1A1206" stroke="#FF9900" stroke-width="1.5" class="node-rect"/>
+    <text x="860" y="215" font-family="'IBM Plex Mono'" font-size="10" fill="#FF9900" text-anchor="middle" font-weight="600">ECR</text>
+    <text x="860" y="230" font-family="'IBM Plex Mono'" font-size="8" fill="#484F58" text-anchor="middle">private container registry</text>
+  </g>
+
+  <!-- IAM -->
+  <g class="node-group"
+     data-title="IAM Roles & Policies"
+     data-desc="Key roles: ec2_role (EC2 can pull ECR, write CloudWatch), eks_cluster_role (EKS control plane), eks_node_role (worker nodes), github_oidc_role (CI/CD, no keys)."
+     data-tf="aws_iam_role.ec2 + aws_iam_role.eks_cluster + aws_iam_instance_profile.ec2">
+    <rect x="778" y="256" width="164" height="44" rx="3" fill="#1A1206" stroke="#FF9900" stroke-width="1.5" class="node-rect"/>
+    <text x="860" y="275" font-family="'IBM Plex Mono'" font-size="10" fill="#FF9900" text-anchor="middle" font-weight="600">IAM</text>
+    <text x="860" y="290" font-family="'IBM Plex Mono'" font-size="8" fill="#484F58" text-anchor="middle">roles · policies · OIDC</text>
+  </g>
+
+  <!-- Route53 -->
+  <g class="node-group"
+     data-title="Route 53"
+     data-desc="DNS management. A-record alias pointing your domain to the ALB DNS name. Health checks on ALB. Optionally manage subdomain per environment."
+     data-tf="aws_route53_zone.main + aws_route53_record.app">
+    <rect x="778" y="316" width="164" height="44" rx="3" fill="#1A1206" stroke="#FF9900" stroke-width="1.5" class="node-rect"/>
+    <text x="860" y="335" font-family="'IBM Plex Mono'" font-size="10" fill="#FF9900" text-anchor="middle" font-weight="600">Route 53</text>
+    <text x="860" y="350" font-family="'IBM Plex Mono'" font-size="8" fill="#484F58" text-anchor="middle">DNS → ALB alias record</text>
+  </g>
+
+  <!-- ACM -->
+  <g class="node-group"
+     data-title="ACM — TLS Certificate"
+     data-desc="Free TLS certificate managed by AWS. Attached to ALB listener on port 443. Auto-renews. Validated via Route53 DNS validation."
+     data-tf="aws_acm_certificate.main + aws_acm_certificate_validation.main">
+    <rect x="778" y="376" width="164" height="44" rx="3" fill="#1A1206" stroke="#FF9900" stroke-width="1.5" class="node-rect"/>
+    <text x="860" y="395" font-family="'IBM Plex Mono'" font-size="10" fill="#FF9900" text-anchor="middle" font-weight="600">ACM</text>
+    <text x="860" y="410" font-family="'IBM Plex Mono'" font-size="8" fill="#484F58" text-anchor="middle">TLS cert · DNS validated</text>
+  </g>
+
+  <!-- CloudWatch -->
+  <g class="node-group"
+     data-title="CloudWatch"
+     data-desc="AWS-native monitoring. EC2 CPU/memory metrics, ALB request count, RDS connections. Log groups for app and system logs. Alarms to SNS → email."
+     data-tf="aws_cloudwatch_log_group.app + aws_cloudwatch_metric_alarm.cpu">
+    <rect x="778" y="436" width="164" height="44" rx="3" fill="#1A1206" stroke="#FF9900" stroke-width="1.5" class="node-rect"/>
+    <text x="860" y="455" font-family="'IBM Plex Mono'" font-size="10" fill="#FF9900" text-anchor="middle" font-weight="600">CloudWatch</text>
+    <text x="860" y="470" font-family="'IBM Plex Mono'" font-size="8" fill="#484F58" text-anchor="middle">metrics · logs · alarms</text>
+  </g>
+
+  <!-- Secrets Manager -->
+  <g class="node-group"
+     data-title="Secrets Manager"
+     data-desc="Stores DB password, API keys. EC2 instances retrieve secrets at runtime via IAM role (no passwords in env files or code). Referenced in Terraform via data source."
+     data-tf="aws_secretsmanager_secret.db_password">
+    <rect x="778" y="496" width="164" height="44" rx="3" fill="#1A1206" stroke="#FF9900" stroke-width="1.5" class="node-rect"/>
+    <text x="860" y="515" font-family="'IBM Plex Mono'" font-size="10" fill="#FF9900" text-anchor="middle" font-weight="600">Secrets Manager</text>
+    <text x="860" y="530" font-family="'IBM Plex Mono'" font-size="8" fill="#484F58" text-anchor="middle">DB creds · API keys</text>
+  </g>
+
+  <!-- GitHub Actions box (outside AWS) -->
+  <g class="node-group"
+     data-title="GitHub Actions (CI/CD)"
+     data-desc="Runs on github.com. Authenticates to AWS via OIDC (no long-lived keys). Builds Docker image, pushes to ECR, triggers Ansible or ArgoCD sync."
+     data-tf="aws_iam_openid_connect_provider.github + aws_iam_role.github_actions">
+    <rect x="778" y="620" width="164" height="60" rx="3" fill="#0D1520" stroke="#00D4FF" stroke-width="1.5" class="node-rect"/>
+    <text x="860" y="643" font-family="'IBM Plex Mono'" font-size="10" fill="#00D4FF" text-anchor="middle" font-weight="600">GitHub Actions</text>
+    <text x="860" y="658" font-family="'IBM Plex Mono'" font-size="8" fill="#484F58" text-anchor="middle">CI/CD · OIDC auth</text>
+    <text x="860" y="672" font-family="'IBM Plex Mono'" font-size="8" fill="#484F58" text-anchor="middle">no stored AWS keys</text>
+  </g>
+
+  <!-- ═══════════════════════════════════ -->
+  <!-- TRAFFIC FLOW ARROWS -->
+  <!-- ═══════════════════════════════════ -->
+
+  <!-- Internet → IGW -->
+  <text x="480" y="80" font-family="'IBM Plex Mono'" font-size="9" fill="#484F58" text-anchor="middle">INTERNET</text>
+  <line x1="480" y1="86" x2="104" y2="108" stroke="#00D4FF" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrow-cyan)"/>
+
+  <!-- IGW → ALB -->
+  <line x1="104" y1="156" x2="192" y2="282" stroke="#00D4FF" stroke-width="1.5" marker-end="url(#arrow-cyan)"/>
+
+  <!-- ALB → App Server 1 -->
+  <line x1="150" y1="318" x2="109" y2="368" stroke="#00D4FF" stroke-width="1.5" marker-end="url(#arrow-cyan)"/>
+
+  <!-- ALB → App Server 2 -->
+  <line x1="234" y1="318" x2="275" y2="368" stroke="#00D4FF" stroke-width="1.5" marker-end="url(#arrow-cyan)"/>
+
+  <!-- App → RDS -->
+  <line x1="109" y1="438" x2="109" y2="692" stroke="#F0B429" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arrow-orange)"/>
+  <line x1="275" y1="438" x2="275" y2="692" stroke="#F0B429" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arrow-orange)"/>
+
+  <!-- NAT → Internet (private subnet outbound) -->
+  <line x1="256" y1="156" x2="400" y2="200" stroke="#39D353" stroke-width="1" stroke-dasharray="3,3" marker-end="url(#arrow-green)"/>
+  <text x="415" y="195" font-family="'IBM Plex Mono'" font-size="8" fill="#39D353">outbound only</text>
+  <text x="415" y="208" font-family="'IBM Plex Mono'" font-size="8" fill="#39D353">(ECR pulls etc)</text>
+
+  <!-- Private → NAT (for ECR pulls) -->
+  <line x1="192" y1="368" x2="256" y2="156" stroke="#39D353" stroke-width="1" stroke-dasharray="3,3" opacity="0.4" marker-end="url(#arrow-green)"/>
+
+  <!-- Bastion → App1 (ansible) -->
+  <line x1="179" y1="232" x2="109" y2="368" stroke="#9B5DE5" stroke-width="1.5" stroke-dasharray="6,2" marker-end="url(#arrow-purple)"/>
+  <text x="100" y="310" font-family="'IBM Plex Mono'" font-size="8" fill="#9B5DE5" transform="rotate(-55,100,310)">Ansible SSH</text>
+
+  <!-- GitHub → ECR -->
+  <line x1="778" y1="645" x2="778" y2="218" stroke="#00D4FF" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arrow-cyan)"/>
+
+  <!-- GitHub → Bastion / EKS (deploy trigger) -->
+  <line x1="778" y1="645" x2="400" y2="480" stroke="#9B5DE5" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arrow-purple)"/>
+  <text x="520" y="580" font-family="'IBM Plex Mono'" font-size="8" fill="#9B5DE5">deploy trigger</text>
+
+  <!-- ECR → EKS (image pull) -->
+  <line x1="778" y1="218" x2="340" y2="480" stroke="#FF9900" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arrow-orange)"/>
+
+  <!-- Route53 → ALB -->
+  <line x1="778" y1="338" x2="352" y2="300" stroke="#FF9900" stroke-width="1" stroke-dasharray="4,2" marker-end="url(#arrow-orange)"/>
+
+  <!-- Secrets Manager → App servers -->
+  <line x1="778" y1="518" x2="352" y2="402" stroke="#FF9900" stroke-width="1" stroke-dasharray="3,3" opacity="0.5" marker-end="url(#arrow-orange)"/>
+
+  <!-- CloudWatch ← App servers -->
+  <line x1="352" y1="420" x2="778" y2="458" stroke="#FF9900" stroke-width="1" stroke-dasharray="3,3" opacity="0.5" marker-end="url(#arrow-orange)"/>
+
+  <!-- ═══════════════════════════════════ -->
+  <!-- MODULE LABELS -->
+  <!-- ═══════════════════════════════════ -->
+  <text x="400" y="640" font-family="'IBM Plex Mono'" font-size="9" fill="#2A3A4A" text-anchor="middle" letter-spacing="1">─────── TERRAFORM MODULE BOUNDARY ───────</text>
+  <text x="180" y="755" font-family="'IBM Plex Mono'" font-size="8" fill="#2A3A4A" text-anchor="middle">modules/networking  ·  modules/compute  ·  modules/data  ·  modules/eks</text>
+
+</svg>
+</div>
+
+<!-- Terraform module breakdown -->
+<div class="tf-panel">
+  <div class="tf-card">
+    <h3>modules/networking</h3>
+    <div class="tf-resource"><span>aws_vpc.main</span></div>
+    <div class="tf-resource"><span>aws_subnet.public[*]</span></div>
+    <div class="tf-resource"><span>aws_subnet.private[*]</span></div>
+    <div class="tf-resource"><span>aws_subnet.data[*]</span></div>
+    <div class="tf-resource"><span>aws_internet_gateway.main</span></div>
+    <div class="tf-resource"><span>aws_nat_gateway.main</span></div>
+    <div class="tf-resource"><span>aws_eip.nat</span></div>
+    <div class="tf-resource"><span>aws_route_table.public/private</span></div>
+    <div class="tf-resource"><span>aws_route_table_association[*]</span></div>
+  </div>
+  <div class="tf-card">
+    <h3>modules/security-groups</h3>
+    <div class="tf-resource"><span>aws_security_group.bastion_sg</span></div>
+    <div class="tf-resource"><span>aws_security_group.alb_sg</span></div>
+    <div class="tf-resource"><span>aws_security_group.app_sg</span></div>
+    <div class="tf-resource"><span>aws_security_group.db_sg</span></div>
+    <div class="tf-resource"><span>aws_security_group_rule[*]</span></div>
+  </div>
+  <div class="tf-card">
+    <h3>modules/compute</h3>
+    <div class="tf-resource"><span>aws_instance.bastion</span></div>
+    <div class="tf-resource"><span>aws_instance.app (count=2)</span></div>
+    <div class="tf-resource"><span>aws_key_pair.deployer</span></div>
+    <div class="tf-resource"><span>aws_iam_instance_profile.ec2</span></div>
+    <div class="tf-resource"><span>aws_lb.main</span></div>
+    <div class="tf-resource"><span>aws_lb_listener.https</span></div>
+    <div class="tf-resource"><span>aws_lb_target_group.app</span></div>
+    <div class="tf-resource"><span>aws_lb_target_group_attachment[*]</span></div>
+  </div>
+  <div class="tf-card">
+    <h3>modules/data</h3>
+    <div class="tf-resource"><span>aws_db_instance.postgres</span></div>
+    <div class="tf-resource"><span>aws_db_subnet_group.main</span></div>
+    <div class="tf-resource"><span>aws_s3_bucket.tf_state</span></div>
+    <div class="tf-resource"><span>aws_dynamodb_table.tf_lock</span></div>
+    <div class="tf-resource"><span>aws_secretsmanager_secret.db_pass</span></div>
+  </div>
+  <div class="tf-card">
+    <h3>modules/eks</h3>
+    <div class="tf-resource"><span>aws_eks_cluster.main</span></div>
+    <div class="tf-resource"><span>aws_eks_node_group.workers</span></div>
+    <div class="tf-resource"><span>aws_iam_role.eks_cluster</span></div>
+    <div class="tf-resource"><span>aws_iam_role.eks_nodes</span></div>
+    <div class="tf-resource"><span>aws_iam_role_policy_attachment[*]</span></div>
+  </div>
+  <div class="tf-card">
+    <h3>modules/iam</h3>
+    <div class="tf-resource"><span>aws_iam_role.ec2_role</span></div>
+    <div class="tf-resource"><span>aws_iam_policy.ecr_pull</span></div>
+    <div class="tf-resource"><span>aws_iam_policy.secrets_read</span></div>
+    <div class="tf-resource"><span>aws_iam_openid_connect_provider.github</span></div>
+    <div class="tf-resource"><span>aws_iam_role.github_actions</span></div>
+  </div>
+</div>
+
+<div id="tooltip" class="tooltip">
+  <div class="tooltip-title" id="tt-title"></div>
+  <div id="tt-desc"></div>
+  <div class="tooltip-tf" id="tt-tf"></div>
+</div>
+
+<script>
+  const tooltip = document.getElementById('tooltip');
+  const ttTitle = document.getElementById('tt-title');
+  const ttDesc = document.getElementById('tt-desc');
+  const ttTf = document.getElementById('tt-tf');
+
+  document.querySelectorAll('.node-group').forEach(node => {
+    node.addEventListener('mouseenter', (e) => {
+      ttTitle.textContent = node.dataset.title;
+      ttDesc.textContent = node.dataset.desc;
+      ttTf.textContent = 'TF: ' + node.dataset.tf;
+      tooltip.classList.add('visible');
+    });
+    node.addEventListener('mousemove', (e) => {
+      tooltip.style.left = (e.clientX + 16) + 'px';
+      tooltip.style.top = (e.clientY - 10) + 'px';
+    });
+    node.addEventListener('mouseleave', () => {
+      tooltip.classList.remove('visible');
+    });
+  });
+</script>
+</body>
+</html>

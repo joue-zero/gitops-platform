@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phase 1 — Terraform Foundation</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300;0,400;0,600;0,700;1,300&family=Familjen+Grotesk:wght@600;700&display=swap');
+
+:root {
+  --bg: #07090D;
+  --surface: #0C0F15;
+  --surface2: #111520;
+  --border: #1A2030;
+  --border2: #232B3A;
+  --text: #B8C4D8;
+  --muted: #3D4A5C;
+  --accent: #4DFFB4;
+  --accent2: #FF6B35;
+  --accent3: #7EB8FF;
+  --accent4: #FFD166;
+  --red: #FF4D6D;
+  --purple: #B08BFF;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1.6;
+  min-height: 100vh;
+}
+
+/* ── HEADER ── */
+.header {
+  padding: 36px 40px 28px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, #07090D 60%, #0D1520 100%);
+  position: relative;
+  overflow: hidden;
+}
+.header::before {
+  content: 'PHASE 01';
+  position: absolute;
+  right: 40px; top: 20px;
+  font-family: 'Familjen Grotesk', sans-serif;
+  font-size: 80px;
+  font-weight: 700;
+  color: #0D1520;
+  letter-spacing: -2px;
+  user-select: none;
+}
+.phase-label {
+  font-size: 10px;
+  letter-spacing: 0.25em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+.header h1 {
+  font-family: 'Familjen Grotesk', sans-serif;
+  font-size: 30px;
+  font-weight: 700;
+  color: #E8F0FF;
+  letter-spacing: -0.5px;
+  margin-bottom: 8px;
+}
+.header-sub {
+  font-size: 12px;
+  color: var(--muted);
+  max-width: 560px;
+}
+.progress-bar {
+  margin-top: 24px;
+  display: flex;
+  gap: 4px;
+}
+.progress-seg {
+  height: 3px;
+  border-radius: 2px;
+  flex: 1;
+  background: var(--border2);
+  transition: background 0.3s;
+}
+.progress-seg.done { background: var(--accent); }
+.progress-seg.active { background: var(--accent2); }
+
+/* ── LAYOUT ── */
+.layout {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: calc(100vh - 160px);
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  border-right: 1px solid var(--border);
+  padding: 24px 0;
+  background: var(--surface);
+  position: sticky;
+  top: 0;
+  height: calc(100vh - 160px);
+  overflow-y: auto;
+}
+.sidebar-section {
+  padding: 0 16px 16px;
+  margin-bottom: 4px;
+}
+.sidebar-label {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+  text-transform: uppercase;
+  padding: 0 8px;
+  margin-bottom: 8px;
+}
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid transparent;
+}
+.nav-item:hover { background: var(--surface2); }
+.nav-item.active {
+  background: var(--surface2);
+  border-color: var(--border2);
+}
+.nav-num {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 9px;
+  font-weight: 700;
+  flex-shrink: 0;
+  border: 1px solid var(--border2);
+  color: var(--muted);
+}
+.nav-item.active .nav-num,
+.nav-item.done .nav-num {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #07090D;
+}
+.nav-item.done .nav-num::after { content: '✓'; }
+.nav-title {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.3;
+}
+.nav-item.active .nav-title { color: var(--text); }
+.nav-item.done .nav-title { color: var(--accent); }
+
+/* ── MAIN CONTENT ── */
+.main {
+  padding: 36px 48px;
+  max-width: 860px;
+}
+
+.step-panel { display: none; }
+.step-panel.active { display: block; }
+
+/* Step header */
+.step-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+.step-num-big {
+  font-family: 'Familjen Grotesk', sans-serif;
+  font-size: 52px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--border2);
+  flex-shrink: 0;
+}
+.step-meta { flex: 1; }
+.step-tag {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 2px;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.step-title {
+  font-family: 'Familjen Grotesk', sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: #E8F0FF;
+  margin-bottom: 6px;
+  line-height: 1.2;
+}
+.step-why {
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+/* Content blocks */
+.block { margin-bottom: 28px; }
+.block-title {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.block-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* Code block */
+.code-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+.code-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  font-size: 10px;
+}
+.code-filename { color: var(--accent3); letter-spacing: 0.05em; }
+.code-lang { color: var(--muted); }
+.code-body {
+  padding: 16px;
+  font-size: 12px;
+  line-height: 1.8;
+  overflow-x: auto;
+  white-space: pre;
+  color: var(--text);
+}
+/* Syntax highlight helpers */
+.kw { color: #B08BFF; }
+.str { color: #4DFFB4; }
+.cmt { color: #3D4A5C; font-style: italic; }
+.fn { color: #7EB8FF; }
+.val { color: #FFD166; }
+.op { color: #FF6B35; }
+
+/* Callout boxes */
+.callout {
+  padding: 14px 18px;
+  border-radius: 3px;
+  border-left: 3px solid;
+  margin-bottom: 16px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.callout-why { border-color: var(--accent); background: #071510; color: #8AFFD4; }
+.callout-warn { border-color: var(--accent4); background: #14110A; color: #FFD166; }
+.callout-danger { border-color: var(--red); background: #140A0A; color: #FF8FA3; }
+.callout-info { border-color: var(--accent3); background: #080F18; color: #9DC8FF; }
+.callout strong { font-weight: 600; }
+
+/* Step list */
+.step-list { list-style: none; }
+.step-list li {
+  display: flex;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.step-list li:last-child { border-bottom: none; }
+.step-list li::before {
+  content: attr(data-n);
+  color: var(--accent2);
+  font-weight: 700;
+  flex-shrink: 0;
+  width: 20px;
+}
+
+/* File tree */
+.tree {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  padding: 16px;
+  font-size: 12px;
+  line-height: 2;
+}
+.tree-dir { color: var(--accent3); }
+.tree-file { color: var(--text); }
+.tree-note { color: var(--muted); font-style: italic; }
+.tree-indent { padding-left: 20px; display: block; }
+
+/* Checklist */
+.checklist { list-style: none; }
+.checklist li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  font-size: 12px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+}
+.checklist li:last-child { border-bottom: none; }
+.check-box {
+  width: 16px; height: 16px;
+  border: 1px solid var(--border2);
+  border-radius: 2px;
+  flex-shrink: 0;
+  margin-top: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.checklist li.checked .check-box {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #07090D;
+  font-size: 10px;
+}
+.checklist li.checked span { text-decoration: line-through; color: var(--muted); }
+
+/* Nav buttons */
+.step-nav {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.btn {
+  padding: 10px 24px;
+  border-radius: 3px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text);
+  transition: all 0.15s;
+}
+.btn:hover { border-color: var(--accent3); color: var(--accent3); }
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #07090D;
+  font-weight: 700;
+}
+.btn-primary:hover { background: #7DFFCC; border-color: #7DFFCC; color: #07090D; }
+.btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* inline code */
+code {
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  padding: 1px 6px;
+  border-radius: 2px;
+  font-size: 11px;
+  color: var(--accent3);
+}
+
+@media (max-width: 700px) {
+  .layout { grid-template-columns: 1fr; }
+  .sidebar { display: none; }
+  .main { padding: 24px 20px; }
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="phase-label">Production GitOps Platform</div>
+  <h1>Phase 1 — Terraform Foundation</h1>
+  <div class="header-sub">Complete AWS infrastructure from zero. Every step is what a senior engineer would actually write, with the reasoning behind each decision.</div>
+  <div class="progress-bar" id="progress-bar"></div>
+</div>
+
+<div class="layout">
+  <nav class="sidebar">
+    <div class="sidebar-label">Steps</div>
+    <div class="sidebar-section" id="nav-list"></div>
+  </nav>
+
+  <main class="main" id="main-content"></main>
+</div>
+
+<script>
+const STEPS = [
+  {
+    tag: "Prerequisites", tagColor: "#B08BFF",
+    title: "Local toolchain & AWS account setup",
+    why: "Before writing a single line of Terraform, your local environment must be clean and your AWS account must be bootstrapped correctly. Skipping this causes debugging pain later.",
+    content: `
+<div class="block">
+  <div class="block-title">Tools to install</div>
+  <div class="callout callout-info">Install these in order. Each one builds on the previous.</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">terminal</span><span class="code-lang">bash</span></div>
+    <div class="code-body"><span class="cmt"># 1. Terraform (use tfenv to manage versions — like nvm for Node)</span>
+brew install tfenv          <span class="cmt"># macOS</span>
+sudo snap install tfenv     <span class="cmt"># Ubuntu</span>
+tfenv install 1.7.5
+tfenv use 1.7.5
+terraform --version         <span class="cmt"># must print 1.7.5</span>
+
+<span class="cmt"># 2. AWS CLI v2</span>
+curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o awscliv2.zip
+unzip awscliv2.zip && sudo ./aws/install
+aws --version
+
+<span class="cmt"># 3. Other tools you'll need</span>
+brew install jq git          <span class="cmt"># jq parses terraform output JSON</span></div>
+  </div>
+</div>
+
+<div class="block">
+  <div class="block-title">AWS IAM — the right way</div>
+  <div class="callout callout-danger"><strong>Never use your AWS root account.</strong> Root has no restrictions. One leaked key = total account compromise. Create an IAM user for Terraform with only the permissions it needs.</div>
+  <ul class="step-list">
+    <li data-n="1">Log into AWS Console as root → IAM → Users → Create user. Name it <code>terraform-deploy</code></li>
+    <li data-n="2">Attach policy: <code>AdministratorAccess</code> for now (you'll lock this down later with least-privilege). On a real team you'd scope this tighter from day one.</li>
+    <li data-n="3">Security credentials tab → Create access key → choose "CLI" → download CSV. <strong>This is the only time you see the secret key.</strong></li>
+    <li data-n="4">Configure AWS CLI with a named profile so you don't overwrite existing credentials:</li>
+  </ul>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">terminal</span><span class="code-lang">bash</span></div>
+    <div class="code-body">aws configure --profile gitops-platform
+<span class="cmt"># AWS Access Key ID:     paste from CSV</span>
+<span class="cmt"># AWS Secret Access Key: paste from CSV</span>
+<span class="cmt"># Default region:        eu-central-1</span>
+<span class="cmt"># Default output format: json</span>
+
+<span class="cmt"># Test it</span>
+aws sts get-caller-identity --profile gitops-platform
+<span class="cmt"># Should print your account ID and "terraform-deploy" as the user</span>
+
+<span class="cmt"># Set it as default for this terminal session</span>
+export AWS_PROFILE=gitops-platform</div>
+  </div>
+</div>
+
+<div class="block">
+  <div class="block-title">SSH keypair — generate once, use everywhere</div>
+  <div class="callout callout-why"><strong>Why ed25519?</strong> Shorter keys, faster, more secure than RSA. All modern Linux distros support it.</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">terminal</span><span class="code-lang">bash</span></div>
+    <div class="code-body"><span class="cmt"># Generate the keypair</span>
+ssh-keygen -t ed25519 -f ~/.ssh/gitops-platform -C "gitops-platform-key" -N ""
+<span class="cmt"># -N "" means no passphrase (fine for a project key)</span>
+
+<span class="cmt"># Verify</span>
+ls -la ~/.ssh/gitops-platform*
+<span class="cmt"># gitops-platform      ← PRIVATE. Never share, never commit</span>
+<span class="cmt"># gitops-platform.pub  ← PUBLIC. Goes into Terraform → AWS</span></div>
+  </div>
+</div>
+
+<div class="block">
+  <div class="block-title">Verify checklist</div>
+  <ul class="checklist" id="chk-0">
+    <li data-c="0-0"><div class="check-box"></div><span>terraform --version prints 1.7.x</span></li>
+    <li data-c="0-1"><div class="check-box"></div><span>aws sts get-caller-identity returns terraform-deploy user</span></li>
+    <li data-c="0-2"><div class="check-box"></div><span>~/.ssh/gitops-platform and .pub both exist</span></li>
+    <li data-c="0-3"><div class="check-box"></div><span>export AWS_PROFILE=gitops-platform is set</span></li>
+  </ul>
+</div>`
+  },
+
+  {
+    tag: "Remote State", tagColor: "#FF6B35",
+    title: "Bootstrap S3 + DynamoDB for Terraform state",
+    why: "Terraform state is the brain of your infrastructure — it maps real AWS resources to your code. It MUST live in S3, not on your laptop. If you lose local state, Terraform can't manage existing resources. This is the first thing you create, manually, before any other Terraform code.",
+    content: `
+<div class="block">
+  <div class="block-title">Why this exists</div>
+  <div class="callout callout-warn"><strong>The chicken-and-egg problem:</strong> You can't use Terraform remote state to create the S3 bucket that stores Terraform state. So you create the bucket once manually (or with a bootstrap script), then never touch it again.</div>
+</div>
+
+<div class="block">
+  <div class="block-title">Create the bootstrap resources (AWS CLI — one time only)</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">terminal</span><span class="code-lang">bash</span></div>
+    <div class="code-body"><span class="cmt"># Variables — change the bucket name, must be globally unique</span>
+REGION="eu-central-1"
+ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+BUCKET_NAME="gitops-platform-tfstate-\${ACCOUNT_ID}"
+
+<span class="cmt"># 1. Create S3 bucket</span>
+aws s3api create-bucket \
+  --bucket $BUCKET_NAME \
+  --region $REGION \
+  --create-bucket-configuration LocationConstraint=$REGION
+
+<span class="cmt"># 2. Enable versioning (lets you roll back state)</span>
+aws s3api put-bucket-versioning \
+  --bucket $BUCKET_NAME \
+  --versioning-configuration Status=Enabled
+
+<span class="cmt"># 3. Block ALL public access (never public)</span>
+aws s3api put-public-access-block \
+  --bucket $BUCKET_NAME \
+  --public-access-block-configuration \
+    "BlockPublicAcls=true,IgnorePublicAcls=true,\
+     BlockPublicPolicy=true,RestrictPublicBuckets=true"
+
+<span class="cmt"># 4. Enable encryption at rest</span>
+aws s3api put-bucket-encryption \
+  --bucket $BUCKET_NAME \
+  --server-side-encryption-configuration \
+    '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
+
+<span class="cmt"># 5. DynamoDB table for state locking</span>
+aws dynamodb create-table \
+  --table-name gitops-platform-tf-lock \
+  --attribute-definitions AttributeName=LockID,AttributeType=S \
+  --key-schema AttributeName=LockID,KeyType=HASH \
+  --billing-mode PAY_PER_REQUEST \
+  --region $REGION
+
+echo "Bootstrap done. Bucket: $BUCKET_NAME"</div>
+  </div>
+  <div class="callout callout-info"><strong>PAY_PER_REQUEST</strong> on DynamoDB = you pay per lock operation, not per hour. For a project this is ~$0.00 per month.</div>
+</div>
+
+<div class="block">
+  <div class="block-title">Note these values — you'll use them in Step 3</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">notes.txt — do not commit this</span></div>
+    <div class="code-body">bucket  = "gitops-platform-tfstate-123456789"
+key     = "global/terraform.tfstate"
+region  = "eu-central-1"
+dynamo  = "gitops-platform-tf-lock"</div>
+  </div>
+</div>
+
+<div class="block">
+  <div class="block-title">Verify checklist</div>
+  <ul class="checklist">
+    <li><div class="check-box"></div><span>S3 bucket exists and versioning is Enabled</span></li>
+    <li><div class="check-box"></div><span>Public access is fully blocked on the bucket</span></li>
+    <li><div class="check-box"></div><span>DynamoDB table gitops-platform-tf-lock exists</span></li>
+  </ul>
+</div>`
+  },
+
+  {
+    tag: "Repo Structure", tagColor: "#4DFFB4",
+    title: "Project folder structure — the senior engineer layout",
+    why: "The folder structure IS the architecture. A flat structure with one main.tf breaks at scale. Modules make resources reusable and testable. Environments (dev/prod) are isolated workspaces.",
+    content: `
+<div class="block">
+  <div class="block-title">Full folder structure</div>
+  <div class="tree">
+<span class="tree-dir">gitops-platform/</span>
+<span class="tree-indent"><span class="tree-dir">terraform/</span>
+<span class="tree-indent"><span class="tree-dir">environments/</span>           <span class="tree-note"># one folder per env</span>
+<span class="tree-indent"><span class="tree-dir">dev/</span>
+<span class="tree-indent"><span class="tree-file">main.tf</span>            <span class="tree-note"># calls modules, wires them together</span>
+<span class="tree-file">variables.tf</span>       <span class="tree-note"># inputs for this env</span>
+<span class="tree-file">outputs.tf</span>         <span class="tree-note"># what this env exposes</span>
+<span class="tree-file">terraform.tfvars</span>   <span class="tree-note"># actual values (gitignored if secrets)</span>
+<span class="tree-file">backend.tf</span>         <span class="tree-note"># remote state config</span>
+<span class="tree-file">providers.tf</span>       <span class="tree-note"># aws provider version pinning</span></span>
+</span>
+<span class="tree-indent"><span class="tree-dir">prod/</span>              <span class="tree-note"># same structure, different tfvars</span>
+</span></span>
+<span class="tree-indent"><span class="tree-dir">modules/</span>                  <span class="tree-note"># reusable building blocks</span>
+<span class="tree-indent"><span class="tree-dir">networking/</span>
+<span class="tree-indent"><span class="tree-file">main.tf</span>            <span class="tree-note"># VPC, subnets, IGW, NAT, route tables</span>
+<span class="tree-file">variables.tf</span>
+<span class="tree-file">outputs.tf</span></span>
+</span>
+<span class="tree-indent"><span class="tree-dir">security-groups/</span>
+<span class="tree-indent"><span class="tree-file">main.tf</span>            <span class="tree-note"># all SGs in one place</span>
+<span class="tree-file">variables.tf</span>
+<span class="tree-file">outputs.tf</span></span>
+</span>
+<span class="tree-indent"><span class="tree-dir">compute/</span>
+<span class="tree-indent"><span class="tree-file">main.tf</span>            <span class="tree-note"># EC2, ALB, key pair</span>
+<span class="tree-file">variables.tf</span>
+<span class="tree-file">outputs.tf</span></span>
+</span>
+<span class="tree-indent"><span class="tree-dir">data/</span>
+<span class="tree-indent"><span class="tree-file">main.tf</span>            <span class="tree-note"># RDS, ElastiCache</span>
+<span class="tree-file">variables.tf</span>
+<span class="tree-file">outputs.tf</span></span>
+</span>
+<span class="tree-indent"><span class="tree-dir">iam/</span>
+<span class="tree-indent"><span class="tree-file">main.tf</span>            <span class="tree-note"># roles, policies, OIDC</span>
+<span class="tree-file">variables.tf</span>
+<span class="tree-file">outputs.tf</span></span>
+</span></span></span>
+<span class="tree-indent"><span class="tree-file">.gitignore</span>               <span class="tree-note"># critical — see below</span></span>
+<span class="tree-indent"><span class="tree-file">README.md</span></span>
+</span>
+<span class="tree-indent"><span class="tree-dir">ansible/</span>                      <span class="tree-note"># Phase 1 Part 2</span>
+</span>
+<span class="tree-indent"><span class="tree-dir">.github/</span>
+<span class="tree-indent"><span class="tree-dir">workflows/</span>                <span class="tree-note"># Phase 2</span>
+</span></span>
+</span>  </div>
+</div>
+
+<div class="block">
+  <div class="block-title">Git repository setup</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">terminal</span><span class="code-lang">bash</span></div>
+    <div class="code-body">mkdir -p gitops-platform/terraform/environments/dev
+mkdir -p gitops-platform/terraform/environments/prod
+mkdir -p gitops-platform/terraform/modules/{networking,security-groups,compute,data,iam}
+mkdir -p gitops-platform/ansible
+mkdir -p gitops-platform/.github/workflows
+cd gitops-platform
+git init
+git remote add origin git@github.com:YOUR_USERNAME/gitops-platform.git</div>
+  </div>
+</div>
+
+<div class="block">
+  <div class="block-title">The .gitignore — this is critical</div>
+  <div class="callout callout-danger"><strong>Committing .terraform/ or terraform.tfstate to git is a career-ending mistake</strong> in production. State contains resource IDs and sometimes secrets in plaintext.</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">.gitignore</span></div>
+    <div class="code-body"><span class="cmt"># Terraform</span>
+.terraform/
+.terraform.lock.hcl         <span class="cmt"># commit this one actually (lock file)</span>
+*.tfstate
+*.tfstate.backup
+*.tfvars                    <span class="cmt"># contains real values, keep local</span>
+crash.log
+override.tf
+
+<span class="cmt"># SSH keys — never ever commit</span>
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+<span class="cmt"># Ansible</span>
+*.retry
+inventory/hosts             <span class="cmt"># generated file, not source</span>
+
+<span class="cmt"># OS</span>
+.DS_Store
+.env</div>
+  </div>
+  <div class="callout callout-warn"><strong>Exception:</strong> <code>.terraform.lock.hcl</code> SHOULD be committed. It pins provider versions so everyone on the team uses the same provider binary. Think of it like package-lock.json.</div>
+</div>`
+  },
+
+  {
+    tag: "Providers", tagColor: "#7EB8FF",
+    title: "providers.tf and backend.tf — pin everything",
+    why: "Provider versions and backend config are the foundation. Senior engineers always pin provider versions with ~> constraints. An unpinned provider can auto-upgrade and break your infra silently.",
+    content: `
+<div class="block">
+  <div class="block-title">providers.tf</div>
+  <div class="callout callout-why"><strong>~> 5.0</strong> means: allow 5.x but not 6.x. This gives you patch updates automatically but protects against breaking major version changes.</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">terraform/environments/dev/providers.tf</span><span class="code-lang">hcl</span></div>
+    <div class="code-body"><span class="kw">terraform</span> {
+  <span class="kw">required_version</span> = <span class="str">"~> 1.7"</span>   <span class="cmt"># pin Terraform itself too</span>
+
+  <span class="kw">required_providers</span> {
+    <span class="fn">aws</span> = {
+      source  = <span class="str">"hashicorp/aws"</span>
+      version = <span class="str">"~> 5.0"</span>
+    }
+  }
+}
+
+<span class="kw">provider</span> <span class="str">"aws"</span> {
+  region  = <span class="kw">var</span>.aws_region
+  profile = <span class="str">"gitops-platform"</span>   <span class="cmt"># the CLI profile from Step 1</span>
+
+  <span class="cmt"># Tags applied to EVERY resource automatically</span>
+  <span class="kw">default_tags</span> {
+    <span class="kw">tags</span> = {
+      Project     = <span class="str">"devops-platform"</span>
+      Environment = <span class="kw">var</span>.environment
+      ManagedBy   = <span class="str">"terraform"</span>
+      Owner       = <span class="str">"joe"</span>
+    }
+  }
+}</div>
+  </div>
+  <div class="callout callout-info"><strong>default_tags</strong> is one of the most important blocks. Every EC2, SG, RDS gets these tags automatically. This enables Ansible dynamic inventory (filter by tag), cost tracking, and is standard in every real AWS team.</div>
+</div>
+
+<div class="block">
+  <div class="block-title">backend.tf</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">terraform/environments/dev/backend.tf</span><span class="code-lang">hcl</span></div>
+    <div class="code-body"><span class="kw">terraform</span> {
+  <span class="kw">backend</span> <span class="str">"s3"</span> {
+    bucket         = <span class="str">"gitops-platform-tfstate-123456789"</span>  <span class="cmt"># your bucket</span>
+    key            = <span class="str">"dev/terraform.tfstate"</span>              <span class="cmt"># path inside bucket</span>
+    region         = <span class="str">"eu-central-1"</span>
+    encrypt        = <span class="val">true</span>
+    dynamodb_table = <span class="str">"gitops-platform-tf-lock"</span>
+    profile        = <span class="str">"gitops-platform"</span>
+  }
+}</div>
+  </div>
+  <div class="callout callout-warn"><strong>key</strong> path convention: use <code>env/terraform.tfstate</code>. When you add prod later, prod uses <code>prod/terraform.tfstate</code>. Both in the same bucket, separate state files, never collide.</div>
+</div>
+
+<div class="block">
+  <div class="block-title">variables.tf — the env's input contract</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">terraform/environments/dev/variables.tf</span><span class="code-lang">hcl</span></div>
+    <div class="code-body"><span class="kw">variable</span> <span class="str">"aws_region"</span> {
+  description = <span class="str">"AWS region to deploy into"</span>
+  type        = <span class="kw">string</span>
+  default     = <span class="str">"eu-central-1"</span>
+}
+
+<span class="kw">variable</span> <span class="str">"environment"</span> {
+  description = <span class="str">"Environment name (dev / prod)"</span>
+  type        = <span class="kw">string</span>
+  default     = <span class="str">"dev"</span>
+}
+
+<span class="kw">variable</span> <span class="str">"vpc_cidr"</span> {
+  description = <span class="str">"CIDR block for the VPC"</span>
+  type        = <span class="kw">string</span>
+  default     = <span class="str">"10.0.0.0/16"</span>
+}
+
+<span class="kw">variable</span> <span class="str">"ssh_public_key_path"</span> {
+  description = <span class="str">"Path to SSH public key to register with AWS"</span>
+  type        = <span class="kw">string</span>
+  default     = <span class="str">"~/.ssh/gitops-platform.pub"</span>
+}
+
+<span class="kw">variable</span> <span class="str">"my_ip"</span> {
+  description = <span class="str">"Your public IP for bastion SSH access"</span>
+  type        = <span class="kw">string</span>
+  <span class="cmt"># No default — must be set in tfvars. Never 0.0.0.0/0</span>
+}</div>
+  </div>
+</div>
+
+<div class="block">
+  <div class="block-title">terraform.tfvars — your actual values (gitignored)</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">terraform/environments/dev/terraform.tfvars</span><span class="code-lang">hcl</span></div>
+    <div class="code-body">aws_region          = <span class="str">"eu-central-1"</span>
+environment         = <span class="str">"dev"</span>
+vpc_cidr            = <span class="str">"10.0.0.0/16"</span>
+ssh_public_key_path = <span class="str">"~/.ssh/gitops-platform.pub"</span>
+my_ip               = <span class="str">"197.x.x.x/32"</span>  <span class="cmt"># run: curl ifconfig.me</span></div>
+  </div>
+</div>
+
+<div class="block">
+  <div class="block-title">Initialize Terraform</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">terminal</span><span class="code-lang">bash</span></div>
+    <div class="code-body">cd terraform/environments/dev
+terraform init
+<span class="cmt"># Should print: "Successfully configured the backend S3"</span>
+<span class="cmt"># and: "Terraform has been successfully initialized"</span></div>
+  </div>
+</div>`
+  },
+
+  {
+    tag: "Networking", tagColor: "#4DFFB4",
+    title: "modules/networking — VPC, subnets, IGW, NAT, routes",
+    why: "The networking module is the foundation everything else sits on. Get the CIDR math right here and you never touch it again. Wrong subnets = costly refactor.",
+    content: `
+<div class="block">
+  <div class="block-title">CIDR plan — decide before you write code</div>
+  <div class="callout callout-info">
+    <strong>VPC:</strong> 10.0.0.0/16 — gives you 65,536 addresses<br>
+    <strong>Public 1a:</strong> 10.0.1.0/24 — Bastion, NAT Gateway<br>
+    <strong>Public 1b:</strong> 10.0.2.0/24 — ALB second AZ<br>
+    <strong>Private 1a:</strong> 10.0.10.0/24 — App servers, EKS nodes<br>
+    <strong>Private 1b:</strong> 10.0.11.0/24 — App servers, EKS nodes<br>
+    <strong>Data 1a:</strong> 10.0.20.0/24 — RDS primary<br>
+    <strong>Data 1b:</strong> 10.0.21.0/24 — RDS standby
+  </div>
+</div>
+
+<div class="block">
+  <div class="block-title">modules/networking/variables.tf</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">terraform/modules/networking/variables.tf</span><span class="code-lang">hcl</span></div>
+    <div class="code-body"><span class="kw">variable</span> <span class="str">"vpc_cidr"</span>     { type = <span class="kw">string</span> }
+<span class="kw">variable</span> <span class="str">"environment"</span>  { type = <span class="kw">string</span> }
+<span class="kw">variable</span> <span class="str">"aws_region"</span>   { type = <span class="kw">string</span> }</div>
+  </div>
+</div>
+
+<div class="block">
+  <div class="block-title">modules/networking/main.tf</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">terraform/modules/networking/main.tf</span><span class="code-lang">hcl</span></div>
+    <div class="code-body"><span class="cmt"># Pull available AZs dynamically — don't hardcode</span>
+<span class="kw">data</span> <span class="str">"aws_availability_zones"</span> <span class="str">"available"</span> {
+  state = <span class="str">"available"</span>
+}
+
+<span class="cmt"># ── VPC ────────────────────────────────────────</span>
+<span class="kw">resource</span> <span class="str">"aws_vpc"</span> <span class="str">"main"</span> {
+  cidr_block           = <span class="kw">var</span>.vpc_cidr
+  enable_dns_support   = <span class="val">true</span>   <span class="cmt"># needed for RDS endpoint resolution</span>
+  enable_dns_hostnames = <span class="val">true</span>   <span class="cmt"># needed for EC2 to have DNS names</span>
+
+  tags = { Name = <span class="str">"\${var.environment}-vpc"</span> }
+}
+
+<span class="cmt"># ── SUBNETS ────────────────────────────────────</span>
+<span class="kw">resource</span> <span class="str">"aws_subnet"</span> <span class="str">"public"</span> {
+  count             = <span class="val">2</span>
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = <span class="fn">cidrsubnet</span>(<span class="kw">var</span>.vpc_cidr, <span class="val">8</span>, count.index + <span class="val">1</span>)
+  <span class="cmt"># cidrsubnet("10.0.0.0/16", 8, 1) = 10.0.1.0/24</span>
+  <span class="cmt"># cidrsubnet("10.0.0.0/16", 8, 2) = 10.0.2.0/24</span>
+  availability_zone = data.aws_availability_zones.available.names[count.index]
+  map_public_ip_on_launch = <span class="val">true</span>   <span class="cmt"># public subnets get public IPs</span>
+
+  tags = { Name = <span class="str">"\${var.environment}-public-\${count.index + 1}"</span> }
+}
+
+<span class="kw">resource</span> <span class="str">"aws_subnet"</span> <span class="str">"private"</span> {
+  count             = <span class="val">2</span>
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = <span class="fn">cidrsubnet</span>(<span class="kw">var</span>.vpc_cidr, <span class="val">8</span>, count.index + <span class="val">10</span>)
+  <span class="cmt"># 10.0.10.0/24, 10.0.11.0/24</span>
+  availability_zone = data.aws_availability_zones.available.names[count.index]
+  map_public_ip_on_launch = <span class="val">false</span>  <span class="cmt"># private — no public IPs</span>
+
+  tags = { Name = <span class="str">"\${var.environment}-private-\${count.index + 1}"</span> }
+}
+
+<span class="kw">resource</span> <span class="str">"aws_subnet"</span> <span class="str">"data"</span> {
+  count             = <span class="val">2</span>
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = <span class="fn">cidrsubnet</span>(<span class="kw">var</span>.vpc_cidr, <span class="val">8</span>, count.index + <span class="val">20</span>)
+  <span class="cmt"># 10.0.20.0/24, 10.0.21.0/24</span>
+  availability_zone = data.aws_availability_zones.available.names[count.index]
+
+  tags = { Name = <span class="str">"\${var.environment}-data-\${count.index + 1}"</span> }
+}
+
+<span class="cmt"># ── INTERNET GATEWAY ───────────────────────────</span>
+<span class="kw">resource</span> <span class="str">"aws_internet_gateway"</span> <span class="str">"main"</span> {
+  vpc_id = aws_vpc.main.id
+  tags   = { Name = <span class="str">"\${var.environment}-igw"</span> }
+}
+
+<span class="cmt"># ── NAT GATEWAY ────────────────────────────────</span>
+<span class="cmt"># Elastic IP for NAT (must exist before NAT GW)</span>
+<span class="kw">resource</span> <span class="str">"aws_eip"</span> <span class="str">"nat"</span> {
+  domain     = <span class="str">"vpc"</span>
+  depends_on = [aws_internet_gateway.main]  <span class="cmt"># IGW must exist first</span>
+  tags       = { Name = <span class="str">"\${var.environment}-nat-eip"</span> }
+}
+
+<span class="kw">resource</span> <span class="str">"aws_nat_gateway"</span> <span class="str">"main"</span> {
+  allocation_id = aws_eip.nat.id
+  subnet_id     = aws_subnet.public[<span class="val">0</span>].id  <span class="cmt"># NAT lives in PUBLIC subnet</span>
+  depends_on    = [aws_internet_gateway.main]
+  tags          = { Name = <span class="str">"\${var.environment}-nat"</span> }
+}
+
+<span class="cmt"># ── ROUTE TABLES ───────────────────────────────</span>
+<span class="cmt"># Public: route 0.0.0.0/0 → IGW</span>
+<span class="kw">resource</span> <span class="str">"aws_route_table"</span> <span class="str">"public"</span> {
+  vpc_id = aws_vpc.main.id
+
+  <span class="kw">route</span> {
+    cidr_block = <span class="str">"0.0.0.0/0"</span>
+    gateway_id = aws_internet_gateway.main.id
+  }
+  tags = { Name = <span class="str">"\${var.environment}-public-rt"</span> }
+}
+
+<span class="cmt"># Private: route 0.0.0.0/0 → NAT GW (outbound only)</span>
+<span class="kw">resource</span> <span class="str">"aws_route_table"</span> <span class="str">"private"</span> {
+  vpc_id = aws_vpc.main.id
+
+  <span class="kw">route</span> {
+    cidr_block     = <span class="str">"0.0.0.0/0"</span>
+    nat_gateway_id = aws_nat_gateway.main.id
+  }
+  tags = { Name = <span class="str">"\${var.environment}-private-rt"</span> }
+}
+
+<span class="cmt"># Associations — attach route tables to subnets</span>
+<span class="kw">resource</span> <span class="str">"aws_route_table_association"</span> <span class="str">"public"</span> {
+  count          = <span class="val">2</span>
+  subnet_id      = aws_subnet.public[count.index].id
+  route_table_id = aws_route_table.public.id
+}
+
+<span class="kw">resource</span> <span class="str">"aws_route_table_association"</span> <span class="str">"private"</span> {
+  count          = <span class="val">2</span>
+  subnet_id      = aws_subnet.private[count.index].id
+  route_table_id = aws_route_table.private.id
+}
+
+<span class="cmt"># Data subnets: no route to internet at all (most isolated)</span></div>
+  </div>
+</div>
+
+<div class="block">
+  <div class="block-title">modules/networking/outputs.tf</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">terraform/modules/networking/outputs.tf</span><span class="code-lang">hcl</span></div>
+    <div class="code-body"><span class="kw">output</span> <span class="str">"vpc_id"</span>          { value = aws_vpc.main.id }
+<span class="kw">output</span> <span class="str">"public_subnet_ids"</span> { value = aws_subnet.public[*].id }
+<span class="kw">output</span> <span class="str">"private_subnet_ids"</span>{ value = aws_subnet.private[*].id }
+<span class="kw">output</span> <span class="str">"data_subnet_ids"</span>   { value = aws_subnet.data[*].id }</div>
+  </div>
+</div>`
+  },
+
+  {
+    tag: "Security Groups", tagColor: "#FF6B35",
+    title: "modules/security-groups — the firewall rules",
+    why: "Security groups are AWS's stateful firewall. Every resource gets one. The rule of thumb: deny everything by default, open only what's needed, reference other SGs rather than CIDRs where possible.",
+    content: `
+<div class="block">
+  <div class="block-title">The SG reference pattern</div>
+  <div class="callout callout-why"><strong>Key insight:</strong> Instead of saying "app_sg allows port 8080 from 10.0.1.0/24", you say "app_sg allows port 8080 from alb_sg". This means if the ALB moves subnets, the rule still works. This is how seniors write SGs.</div>
+</div>
+
+<div class="block">
+  <div class="block-title">modules/security-groups/main.tf</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">terraform/modules/security-groups/main.tf</span><span class="code-lang">hcl</span></div>
+    <div class="code-body"><span class="cmt"># ── BASTION SG ─────────────────────────────────</span>
+<span class="kw">resource</span> <span class="str">"aws_security_group"</span> <span class="str">"bastion"</span> {
+  name        = <span class="str">"\${var.environment}-bastion-sg"</span>
+  description = <span class="str">"SSH access to bastion from operator IP only"</span>
+  vpc_id      = <span class="kw">var</span>.vpc_id
+
+  <span class="kw">ingress</span> {
+    description = <span class="str">"SSH from operator"</span>
+    from_port   = <span class="val">22</span>
+    to_port     = <span class="val">22</span>
+    protocol    = <span class="str">"tcp"</span>
+    cidr_blocks = [<span class="str">"\${var.my_ip}/32"</span>]  <span class="cmt"># ONLY your IP. Never 0.0.0.0/0</span>
+  }
+
+  <span class="kw">egress</span> {
+    description = <span class="str">"All outbound"</span>
+    from_port   = <span class="val">0</span>; to_port = <span class="val">0</span>; protocol = <span class="str">"-1"</span>
+    cidr_blocks = [<span class="str">"0.0.0.0/0"</span>]
+  }
+
+  tags = { Name = <span class="str">"\${var.environment}-bastion-sg"</span> }
+}
+
+<span class="cmt"># ── ALB SG ─────────────────────────────────────</span>
+<span class="kw">resource</span> <span class="str">"aws_security_group"</span> <span class="str">"alb"</span> {
+  name        = <span class="str">"\${var.environment}-alb-sg"</span>
+  description = <span class="str">"Public HTTP/HTTPS to ALB"</span>
+  vpc_id      = <span class="kw">var</span>.vpc_id
+
+  <span class="kw">ingress</span> {
+    from_port   = <span class="val">443</span>; to_port = <span class="val">443</span>; protocol = <span class="str">"tcp"</span>
+    cidr_blocks = [<span class="str">"0.0.0.0/0"</span>]   <span class="cmt"># ALB is public</span>
+  }
+  <span class="kw">ingress</span> {
+    from_port   = <span class="val">80</span>; to_port = <span class="val">80</span>; protocol = <span class="str">"tcp"</span>
+    cidr_blocks = [<span class="str">"0.0.0.0/0"</span>]   <span class="cmt"># for HTTP→HTTPS redirect</span>
+  }
+  <span class="kw">egress</span> {
+    from_port   = <span class="val">0</span>; to_port = <span class="val">0</span>; protocol = <span class="str">"-1"</span>
+    cidr_blocks = [<span class="str">"0.0.0.0/0"</span>]
+  }
+
+  tags = { Name = <span class="str">"\${var.environment}-alb-sg"</span> }
+}
+
+<span class="cmt"># ── APP SG ─────────────────────────────────────</span>
+<span class="kw">resource</span> <span class="str">"aws_security_group"</span> <span class="str">"app"</span> {
+  name        = <span class="str">"\${var.environment}-app-sg"</span>
+  description = <span class="str">"App servers: traffic from ALB and SSH from bastion only"</span>
+  vpc_id      = <span class="kw">var</span>.vpc_id
+
+  <span class="kw">ingress</span> {
+    description     = <span class="str">"App traffic from ALB"</span>
+    from_port       = <span class="val">8080</span>; to_port = <span class="val">8080</span>; protocol = <span class="str">"tcp"</span>
+    security_groups = [aws_security_group.alb.id]  <span class="cmt"># SG reference!</span>
+  }
+  <span class="kw">ingress</span> {
+    description     = <span class="str">"SSH from bastion only"</span>
+    from_port       = <span class="val">22</span>; to_port = <span class="val">22</span>; protocol = <span class="str">"tcp"</span>
+    security_groups = [aws_security_group.bastion.id]  <span class="cmt"># SG reference!</span>
+  }
+  <span class="kw">egress</span> {
+    from_port   = <span class="val">0</span>; to_port = <span class="val">0</span>; protocol = <span class="str">"-1"</span>
+    cidr_blocks = [<span class="str">"0.0.0.0/0"</span>]   <span class="cmt"># outbound for ECR pulls etc</span>
+  }
+
+  tags = { Name = <span class="str">"\${var.environment}-app-sg"</span> }
+}
+
+<span class="cmt"># ── DB SG ──────────────────────────────────────</span>
+<span class="kw">resource</span> <span class="str">"aws_security_group"</span> <span class="str">"db"</span> {
+  name        = <span class="str">"\${var.environment}-db-sg"</span>
+  description = <span class="str">"RDS: only from app servers"</span>
+  vpc_id      = <span class="kw">var</span>.vpc_id
+
+  <span class="kw">ingress</span> {
+    description     = <span class="str">"Postgres from app"</span>
+    from_port       = <span class="val">5432</span>; to_port = <span class="val">5432</span>; protocol = <span class="str">"tcp"</span>
+    security_groups = [aws_security_group.app.id]
+  }
+  <span class="cmt"># NO egress rule = RDS can't initiate outbound connections</span>
+
+  tags = { Name = <span class="str">"\${var.environment}-db-sg"</span> }
+}</div>
+  </div>
+</div>
+
+<div class="block">
+  <div class="block-title">outputs.tf</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">terraform/modules/security-groups/outputs.tf</span><span class="code-lang">hcl</span></div>
+    <div class="code-body"><span class="kw">output</span> <span class="str">"bastion_sg_id"</span> { value = aws_security_group.bastion.id }
+<span class="kw">output</span> <span class="str">"alb_sg_id"</span>     { value = aws_security_group.alb.id }
+<span class="kw">output</span> <span class="str">"app_sg_id"</span>     { value = aws_security_group.app.id }
+<span class="kw">output</span> <span class="str">"db_sg_id"</span>      { value = aws_security_group.db.id }</div>
+  </div>
+</div>`
+  },
+
+  {
+    tag: "Compute", tagColor: "#B08BFF",
+    title: "modules/compute — Bastion, App servers, ALB",
+    why: "The compute module creates your actual EC2 instances and load balancer. Key decisions here: instance profiles (so EC2 can talk to AWS services without keys), user_data (bootstrap script that runs at first boot), and ALB target group health checks.",
+    content: `
+<div class="block">
+  <div class="block-title">IAM instance profile — no hardcoded AWS keys on servers</div>
+  <div class="callout callout-why"><strong>Instance Profile</strong> = an IAM role attached to an EC2. The instance gets temporary credentials automatically via the metadata service (169.254.169.254). This means your app code can call AWS APIs (S3, ECR, Secrets Manager) without any credentials in the environment. This is the correct pattern — never put AWS keys on a server.</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">terraform/modules/compute/main.tf</span><span class="code-lang">hcl</span></div>
+    <div class="code-body"><span class="cmt"># IAM role that EC2 can assume</span>
+<span class="kw">resource</span> <span class="str">"aws_iam_role"</span> <span class="str">"ec2"</span> {
+  name = <span class="str">"\${var.environment}-ec2-role"</span>
+
+  assume_role_policy = <span class="fn">jsonencode</span>({
+    Version = <span class="str">"2012-10-17"</span>
+    Statement = [{
+      Action    = <span class="str">"sts:AssumeRole"</span>
+      Effect    = <span class="str">"Allow"</span>
+      Principal = { Service = <span class="str">"ec2.amazonaws.com"</span> }
+    }]
+  })
+}
+
+<span class="cmt"># Attach managed policies to the role</span>
+<span class="kw">resource</span> <span class="str">"aws_iam_role_policy_attachment"</span> <span class="str">"ecr_read"</span> {
+  role       = aws_iam_role.ec2.name
+  policy_arn = <span class="str">"arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"</span>
+}
+
+<span class="kw">resource</span> <span class="str">"aws_iam_role_policy_attachment"</span> <span class="str">"ssm"</span> {
+  role       = aws_iam_role.ec2.name
+  policy_arn = <span class="str">"arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"</span>
+  <span class="cmt"># SSM = AWS Session Manager: alternative to SSH, useful fallback</span>
+}
+
+<span class="kw">resource</span> <span class="str">"aws_iam_instance_profile"</span> <span class="str">"ec2"</span> {
+  name = <span class="str">"\${var.environment}-ec2-profile"</span>
+  role = aws_iam_role.ec2.name
+}
+
+<span class="cmt"># ── KEY PAIR ───────────────────────────────────</span>
+<span class="kw">resource</span> <span class="str">"aws_key_pair"</span> <span class="str">"deployer"</span> {
+  key_name   = <span class="str">"\${var.environment}-deployer-key"</span>
+  public_key = <span class="fn">file</span>(<span class="kw">var</span>.ssh_public_key_path)
+}
+
+<span class="cmt"># ── BASTION ────────────────────────────────────</span>
+<span class="kw">data</span> <span class="str">"aws_ami"</span> <span class="str">"ubuntu"</span> {
+  most_recent = <span class="val">true</span>
+  owners      = [<span class="str">"099720109477"</span>]  <span class="cmt"># Canonical's AWS account ID</span>
+
+  <span class="kw">filter</span> {
+    name   = <span class="str">"name"</span>
+    values = [<span class="str">"ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"</span>]
+  }
+  <span class="kw">filter</span> {
+    name   = <span class="str">"virtualization-type"</span>
+    values = [<span class="str">"hvm"</span>]
+  }
+}
+
+<span class="kw">resource</span> <span class="str">"aws_instance"</span> <span class="str">"bastion"</span> {
+  ami                    = data.aws_ami.ubuntu.id
+  instance_type          = <span class="str">"t3.micro"</span>
+  subnet_id              = <span class="kw">var</span>.public_subnet_ids[<span class="val">0</span>]
+  key_name               = aws_key_pair.deployer.key_name
+  vpc_security_group_ids = [<span class="kw">var</span>.bastion_sg_id]
+  iam_instance_profile   = aws_iam_instance_profile.ec2.name
+
+  user_data = <span class="fn">base64encode</span>(<span class="str"><<-EOF
+    #!/bin/bash
+    apt-get update -y
+    apt-get install -y awscli jq
+    echo "Bastion ready" > /tmp/init-done
+  EOF</span>)
+
+  tags = { Name = <span class="str">"\${var.environment}-bastion"</span>, Role = <span class="str">"bastion"</span> }
+}
+
+<span class="cmt"># ── APP SERVERS ────────────────────────────────</span>
+<span class="kw">resource</span> <span class="str">"aws_instance"</span> <span class="str">"app"</span> {
+  count                  = <span class="val">2</span>
+  ami                    = data.aws_ami.ubuntu.id
+  instance_type          = <span class="str">"t3.medium"</span>
+  subnet_id              = <span class="kw">var</span>.private_subnet_ids[count.index]
+  key_name               = aws_key_pair.deployer.key_name
+  vpc_security_group_ids = [<span class="kw">var</span>.app_sg_id]
+  iam_instance_profile   = aws_iam_instance_profile.ec2.name
+
+  tags = {
+    Name = <span class="str">"\${var.environment}-app-\${count.index + 1}"</span>
+    Role = <span class="str">"app"</span>   <span class="cmt"># Ansible dynamic inventory filters on this tag</span>
+  }
+}
+
+<span class="cmt"># ── ALB ────────────────────────────────────────</span>
+<span class="kw">resource</span> <span class="str">"aws_lb"</span> <span class="str">"main"</span> {
+  name               = <span class="str">"\${var.environment}-alb"</span>
+  internal           = <span class="val">false</span>
+  load_balancer_type = <span class="str">"application"</span>
+  security_groups    = [<span class="kw">var</span>.alb_sg_id]
+  subnets            = <span class="kw">var</span>.public_subnet_ids   <span class="cmt"># ALB spans BOTH public subnets</span>
+
+  tags = { Name = <span class="str">"\${var.environment}-alb"</span> }
+}
+
+<span class="kw">resource</span> <span class="str">"aws_lb_target_group"</span> <span class="str">"app"</span> {
+  name     = <span class="str">"\${var.environment}-app-tg"</span>
+  port     = <span class="val">8080</span>
+  protocol = <span class="str">"HTTP"</span>
+  vpc_id   = <span class="kw">var</span>.vpc_id
+
+  <span class="kw">health_check</span> {
+    path                = <span class="str">"/health"</span>   <span class="cmt"># your app must expose this endpoint</span>
+    healthy_threshold   = <span class="val">2</span>
+    unhealthy_threshold = <span class="val">3</span>
+    interval            = <span class="val">30</span>
+  }
+}
+
+<span class="kw">resource</span> <span class="str">"aws_lb_target_group_attachment"</span> <span class="str">"app"</span> {
+  count            = <span class="val">2</span>
+  target_group_arn = aws_lb_target_group.app.arn
+  target_id        = aws_instance.app[count.index].id
+  port             = <span class="val">8080</span>
+}
+
+<span class="kw">resource</span> <span class="str">"aws_lb_listener"</span> <span class="str">"http"</span> {
+  load_balancer_arn = aws_lb.main.arn
+  port              = <span class="str">"80"</span>
+  protocol          = <span class="str">"HTTP"</span>
+
+  <span class="cmt"># Redirect HTTP to HTTPS</span>
+  <span class="kw">default_action</span> {
+    type = <span class="str">"redirect"</span>
+    <span class="kw">redirect</span> {
+      port        = <span class="str">"443"</span>
+      protocol    = <span class="str">"HTTPS"</span>
+      status_code = <span class="str">"HTTP_301"</span>
+    }
+  }
+}</div>
+  </div>
+</div>
+
+<div class="block">
+  <div class="block-title">outputs.tf</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">terraform/modules/compute/outputs.tf</span><span class="code-lang">hcl</span></div>
+    <div class="code-body"><span class="kw">output</span> <span class="str">"bastion_public_ip"</span>  { value = aws_instance.bastion.public_ip }
+<span class="kw">output</span> <span class="str">"app_private_ips"</span>    { value = aws_instance.app[*].private_ip }
+<span class="kw">output</span> <span class="str">"alb_dns_name"</span>       { value = aws_lb.main.dns_name }
+<span class="kw">output</span> <span class="str">"ec2_instance_profile"</span>{ value = aws_iam_instance_profile.ec2.name }</div>
+  </div>
+</div>`
+  },
+
+  {
+    tag: "Data Layer", tagColor: "#FFD166",
+    title: "modules/data — RDS Postgres + S3",
+    why: "RDS in a data subnet with a subnet group spanning both AZs gives you Multi-AZ failover. The DB password goes into Secrets Manager, never in Terraform state as plaintext.",
+    content: `
+<div class="block">
+  <div class="block-title">The password problem</div>
+  <div class="callout callout-danger"><strong>Never put DB passwords in tfvars.</strong> Terraform state is stored in S3, and even with encryption, passwords in state is a bad pattern. The right approach: generate a random password in Terraform, store it in Secrets Manager, and let the app retrieve it at runtime via the instance profile.</div>
+</div>
+
+<div class="block">
+  <div class="block-title">modules/data/main.tf</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">terraform/modules/data/main.tf</span><span class="code-lang">hcl</span></div>
+    <div class="code-body"><span class="cmt"># Generate a random password (Terraform manages it)</span>
+<span class="kw">resource</span> <span class="str">"random_password"</span> <span class="str">"db"</span> {
+  length           = <span class="val">32</span>
+  special          = <span class="val">true</span>
+  override_special = <span class="str">"!#$%&*()-_=+[]{}:?"</span>
+}
+
+<span class="cmt"># Store password in Secrets Manager</span>
+<span class="kw">resource</span> <span class="str">"aws_secretsmanager_secret"</span> <span class="str">"db_password"</span> {
+  name                    = <span class="str">"/\${var.environment}/db/password"</span>
+  recovery_window_in_days = <span class="val">0</span>   <span class="cmt"># instant delete (useful in dev)</span>
+}
+
+<span class="kw">resource</span> <span class="str">"aws_secretsmanager_secret_version"</span> <span class="str">"db_password"</span> {
+  secret_id     = aws_secretsmanager_secret.db_password.id
+  secret_string = random_password.db.result
+}
+
+<span class="cmt"># Subnet group — RDS needs subnets in 2+ AZs</span>
+<span class="kw">resource</span> <span class="str">"aws_db_subnet_group"</span> <span class="str">"main"</span> {
+  name       = <span class="str">"\${var.environment}-db-subnet-group"</span>
+  subnet_ids = <span class="kw">var</span>.data_subnet_ids
+
+  tags = { Name = <span class="str">"\${var.environment}-db-subnet-group"</span> }
+}
+
+<span class="cmt"># RDS PostgreSQL</span>
+<span class="kw">resource</span> <span class="str">"aws_db_instance"</span> <span class="str">"postgres"</span> {
+  identifier        = <span class="str">"\${var.environment}-postgres"</span>
+  engine            = <span class="str">"postgres"</span>
+  engine_version    = <span class="str">"15.4"</span>
+  instance_class    = <span class="str">"db.t3.micro"</span>      <span class="cmt"># cheapest for dev</span>
+  allocated_storage = <span class="val">20</span>
+  storage_type      = <span class="str">"gp3"</span>
+  storage_encrypted = <span class="val">true</span>
+
+  db_name  = <span class="str">"appdb"</span>
+  username = <span class="str">"dbadmin"</span>
+  password = random_password.db.result
+
+  db_subnet_group_name   = aws_db_subnet_group.main.name
+  vpc_security_group_ids = [<span class="kw">var</span>.db_sg_id]
+
+  multi_az               = <span class="val">false</span>   <span class="cmt"># true in prod, costs 2x in dev</span>
+  publicly_accessible    = <span class="val">false</span>   <span class="cmt"># never</span>
+  skip_final_snapshot    = <span class="val">true</span>    <span class="cmt"># false in prod</span>
+  backup_retention_period = <span class="val">7</span>      <span class="cmt"># days</span>
+  deletion_protection    = <span class="val">false</span>   <span class="cmt"># true in prod</span>
+
+  tags = { Name = <span class="str">"\${var.environment}-postgres"</span> }
+}
+
+<span class="cmt"># ── S3 BUCKETS ─────────────────────────────────</span>
+<span class="kw">resource</span> <span class="str">"aws_s3_bucket"</span> <span class="str">"app_assets"</span> {
+  bucket        = <span class="str">"\${var.environment}-app-assets-\${var.account_id}"</span>
+  force_destroy = <span class="val">true</span>   <span class="cmt"># easier cleanup in dev</span>
+  tags          = { Name = <span class="str">"app-assets"</span> }
+}
+
+<span class="kw">resource</span> <span class="str">"aws_s3_bucket_versioning"</span> <span class="str">"assets"</span> {
+  bucket = aws_s3_bucket.app_assets.id
+  <span class="kw">versioning_configuration</span> { status = <span class="str">"Enabled"</span> }
+}
+
+<span class="kw">resource</span> <span class="str">"aws_s3_bucket_public_access_block"</span> <span class="str">"assets"</span> {
+  bucket                  = aws_s3_bucket.app_assets.id
+  block_public_acls       = <span class="val">true</span>
+  block_public_policy     = <span class="val">true</span>
+  ignore_public_acls      = <span class="val">true</span>
+  restrict_public_buckets = <span class="val">true</span>
+}</div>
+  </div>
+</div>
+
+<div class="block">
+  <div class="block-title">outputs.tf</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">terraform/modules/data/outputs.tf</span><span class="code-lang">hcl</span></div>
+    <div class="code-body"><span class="kw">output</span> <span class="str">"db_endpoint"</span>        { value = aws_db_instance.postgres.endpoint }
+<span class="kw">output</span> <span class="str">"db_secret_arn"</span>      { value = aws_secretsmanager_secret.db_password.arn }
+<span class="kw">output</span> <span class="str">"app_assets_bucket"</span>  { value = aws_s3_bucket.app_assets.bucket }</div>
+  </div>
+</div>`
+  },
+
+  {
+    tag: "Wire Up", tagColor: "#7EB8FF",
+    title: "environments/dev/main.tf — call all modules",
+    why: "The environment main.tf is the orchestrator. It calls each module and passes outputs from one as inputs to another. This is the file that ties everything together.",
+    content: `
+<div class="block">
+  <div class="block-title">environments/dev/main.tf — the full wiring</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">terraform/environments/dev/main.tf</span><span class="code-lang">hcl</span></div>
+    <div class="code-body"><span class="kw">data</span> <span class="str">"aws_caller_identity"</span> <span class="str">"current"</span> {}   <span class="cmt"># gets your account ID</span>
+
+<span class="cmt"># ── 1. NETWORKING ──────────────────────────────</span>
+<span class="kw">module</span> <span class="str">"networking"</span> {
+  source      = <span class="str">"../../modules/networking"</span>
+  vpc_cidr    = <span class="kw">var</span>.vpc_cidr
+  environment = <span class="kw">var</span>.environment
+  aws_region  = <span class="kw">var</span>.aws_region
+}
+
+<span class="cmt"># ── 2. SECURITY GROUPS ─────────────────────────</span>
+<span class="kw">module</span> <span class="str">"security_groups"</span> {
+  source      = <span class="str">"../../modules/security-groups"</span>
+  vpc_id      = module.networking.vpc_id       <span class="cmt"># output → input</span>
+  environment = <span class="kw">var</span>.environment
+  my_ip       = <span class="kw">var</span>.my_ip
+}
+
+<span class="cmt"># ── 3. COMPUTE ─────────────────────────────────</span>
+<span class="kw">module</span> <span class="str">"compute"</span> {
+  source              = <span class="str">"../../modules/compute"</span>
+  environment         = <span class="kw">var</span>.environment
+  vpc_id              = module.networking.vpc_id
+  public_subnet_ids   = module.networking.public_subnet_ids
+  private_subnet_ids  = module.networking.private_subnet_ids
+  bastion_sg_id       = module.security_groups.bastion_sg_id
+  app_sg_id           = module.security_groups.app_sg_id
+  alb_sg_id           = module.security_groups.alb_sg_id
+  ssh_public_key_path = <span class="kw">var</span>.ssh_public_key_path
+}
+
+<span class="cmt"># ── 4. DATA ────────────────────────────────────</span>
+<span class="kw">module</span> <span class="str">"data"</span> {
+  source           = <span class="str">"../../modules/data"</span>
+  environment      = <span class="kw">var</span>.environment
+  data_subnet_ids  = module.networking.data_subnet_ids
+  db_sg_id         = module.security_groups.db_sg_id
+  account_id       = data.aws_caller_identity.current.account_id
+}</div>
+  </div>
+</div>
+
+<div class="block">
+  <div class="block-title">environments/dev/outputs.tf — what you expose</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">terraform/environments/dev/outputs.tf</span><span class="code-lang">hcl</span></div>
+    <div class="code-body"><span class="kw">output</span> <span class="str">"bastion_public_ip"</span> {
+  value = module.compute.bastion_public_ip
+}
+<span class="kw">output</span> <span class="str">"app_private_ips"</span> {
+  value = module.compute.app_private_ips
+}
+<span class="kw">output</span> <span class="str">"alb_dns_name"</span> {
+  value = module.compute.alb_dns_name
+}
+<span class="kw">output</span> <span class="str">"db_endpoint"</span> {
+  value     = module.data.db_endpoint
+  sensitive = <span class="val">true</span>   <span class="cmt"># won't print in plan output</span>
+}
+<span class="kw">output</span> <span class="str">"db_secret_arn"</span> {
+  value = module.data.db_secret_arn
+}</div>
+  </div>
+</div>`
+  },
+
+  {
+    tag: "Apply & Verify", tagColor: "#4DFFB4",
+    title: "terraform plan → apply → verify everything works",
+    why: "The apply sequence is a ritual. Never apply without plan. Read the plan like a code review. Know what each + and - means before you hit yes.",
+    content: `
+<div class="block">
+  <div class="block-title">The apply sequence</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">terminal</span><span class="code-lang">bash</span></div>
+    <div class="code-body">cd terraform/environments/dev
+
+<span class="cmt"># 1. Format all files (Terraform style standard)</span>
+terraform fmt -recursive
+
+<span class="cmt"># 2. Validate syntax</span>
+terraform validate
+<span class="cmt"># Must print: "Success! The configuration is valid."</span>
+
+<span class="cmt"># 3. Plan — read every line</span>
+terraform plan -out=tfplan
+<span class="cmt"># Count the resources: should be ~25-30 for this setup</span>
+<span class="cmt"># Look for any red "-" lines (destroys) — should be zero on first apply</span>
+
+<span class="cmt"># 4. Apply the saved plan (not terraform apply -auto-approve — always review)</span>
+terraform apply tfplan
+<span class="cmt"># Takes 5-15 min (RDS takes the longest ~5-8 min)</span>
+
+<span class="cmt"># 5. Check outputs</span>
+terraform output
+terraform output bastion_public_ip</div>
+  </div>
+</div>
+
+<div class="block">
+  <div class="block-title">Verify SSH connectivity</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">terminal</span><span class="code-lang">bash</span></div>
+    <div class="code-body">BASTION=$(terraform output -raw bastion_public_ip)
+APP1=$(terraform output -json app_private_ips | jq -r '.[0]')
+
+<span class="cmt"># Test bastion</span>
+ssh -i ~/.ssh/gitops-platform ubuntu@$BASTION "echo bastion OK"
+
+<span class="cmt"># Test app server THROUGH bastion (ProxyJump)</span>
+ssh -i ~/.ssh/gitops-platform \
+    -o ProxyJump=ubuntu@$BASTION \
+    ubuntu@$APP1 "echo app-server OK"
+
+<span class="cmt"># If both print OK — your network topology is correct</span></div>
+  </div>
+</div>
+
+<div class="block">
+  <div class="block-title">Verify state is remote</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">terminal</span><span class="code-lang">bash</span></div>
+    <div class="code-body"><span class="cmt"># Confirm state is in S3, not local</span>
+aws s3 ls s3://gitops-platform-tfstate-YOURACCOUNTID/dev/
+<span class="cmt"># Should show: terraform.tfstate</span>
+
+<span class="cmt"># Confirm no local state file exists</span>
+ls terraform.tfstate 2>/dev/null && echo "BAD: local state exists" || echo "GOOD: no local state"</div>
+  </div>
+</div>
+
+<div class="block">
+  <div class="block-title">Final Phase 1 checklist</div>
+  <ul class="checklist">
+    <li><div class="check-box"></div><span>terraform apply completes with 0 errors</span></li>
+    <li><div class="check-box"></div><span>SSH to bastion works with gitops-platform key</span></li>
+    <li><div class="check-box"></div><span>SSH to app server via ProxyJump works</span></li>
+    <li><div class="check-box"></div><span>State file exists in S3, NOT locally</span></li>
+    <li><div class="check-box"></div><span>RDS endpoint visible in terraform output</span></li>
+    <li><div class="check-box"></div><span>ALB DNS name resolves (curl returns 503 — healthy, no backend yet)</span></li>
+    <li><div class="check-box"></div><span>DB password is in Secrets Manager, not in any file</span></li>
+    <li><div class="check-box"></div><span>terraform fmt -recursive shows no changes</span></li>
+    <li><div class="check-box"></div><span>All EC2 instances have Role tag (needed for Ansible)</span></li>
+    <li><div class="check-box"></div><span>git commit -m "feat: phase 1 terraform infrastructure"</span></li>
+  </ul>
+</div>
+
+<div class="block">
+  <div class="block-title">Teardown when not using (save money)</div>
+  <div class="code-wrap">
+    <div class="code-header"><span class="code-filename">terminal</span><span class="code-lang">bash</span></div>
+    <div class="code-body"><span class="cmt"># Destroy everything (NAT Gateway = ~$1/day when running)</span>
+terraform destroy
+
+<span class="cmt"># Recreate when you continue</span>
+terraform apply tfplan
+
+<span class="cmt"># Estimated cost while running:</span>
+<span class="cmt"># t3.micro bastion:  ~$0.01/hr</span>
+<span class="cmt"># t3.medium x2 app:  ~$0.08/hr</span>
+<span class="cmt"># NAT Gateway:       ~$0.05/hr + data</span>
+<span class="cmt"># RDS t3.micro:      ~$0.02/hr</span>
+<span class="cmt"># ALB:               ~$0.008/hr</span>
+<span class="cmt"># Total:             ~$0.17/hr (~$4/day)</span></div>
+  </div>
+</div>`
+  }
+];
+
+// ── RENDER ENGINE ──
+let currentStep = 0;
+const checks = {};
+
+function saveChecks() {
+  localStorage.setItem('phase1_checks', JSON.stringify(checks));
+}
+
+function renderNav() {
+  const nav = document.getElementById('nav-list');
+  nav.innerHTML = STEPS.map((s, i) => `
+    <div class="nav-item ${i === currentStep ? 'active' : ''} ${checks['done_'+i] ? 'done' : ''}"
+         onclick="goStep(${i})">
+      <div class="nav-num">${checks['done_'+i] ? '' : i+1}</div>
+      <div class="nav-title">${s.title}</div>
+    </div>
+  `).join('');
+}
+
+function renderProgress() {
+  const bar = document.getElementById('progress-bar');
+  bar.innerHTML = STEPS.map((_, i) => `
+    <div class="progress-seg ${i < currentStep ? 'done' : i === currentStep ? 'active' : ''}"></div>
+  `).join('');
+}
+
+function renderContent() {
+  const s = STEPS[currentStep];
+  const main = document.getElementById('main-content');
+  main.innerHTML = `
+    <div class="step-panel active">
+      <div class="step-header">
+        <div class="step-num-big">${String(currentStep+1).padStart(2,'0')}</div>
+        <div class="step-meta">
+          <div class="step-tag" style="background:${s.tagColor}22;color:${s.tagColor};border:1px solid ${s.tagColor}44">${s.tag}</div>
+          <div class="step-title">${s.title}</div>
+          <div class="step-why">${s.why}</div>
+        </div>
+      </div>
+      ${s.content}
+      <div class="step-nav">
+        <button class="btn" onclick="goStep(${currentStep-1})" ${currentStep===0?'disabled':''}>← Previous</button>
+        <button class="btn btn-primary" onclick="goStep(${currentStep+1})" ${currentStep===STEPS.length-1?'disabled':''}>Next step →</button>
+      </div>
+    </div>
+  `;
+
+  // Re-attach checklist listeners
+  document.querySelectorAll('.checklist li').forEach(li => {
+    li.addEventListener('click', () => {
+      li.classList.toggle('checked');
+      const box = li.querySelector('.check-box');
+      box.textContent = li.classList.contains('checked') ? '✓' : '';
+    });
+  });
+}
+
+function goStep(n) {
+  if (n < 0 || n >= STEPS.length) return;
+  currentStep = n;
+  renderNav();
+  renderProgress();
+  renderContent();
+  document.querySelector('.main').scrollTop = 0;
+  window.scrollTo(0, 0);
+}
+
+// Init
+renderNav();
+renderProgress();
+renderContent();
+</script>
+</body>
+</html>

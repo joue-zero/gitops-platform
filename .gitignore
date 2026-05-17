@@ -1,0 +1,22 @@
+# Terraform
+.terraform/
+.terraform.lock.hcl         # commit this one actually (lock file)
+*.tfstate
+*.tfstate.backup
+*.tfvars                    # contains real values, keep local
+crash.log
+override.tf
+
+# SSH keys — never ever commit
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# Ansible
+*.retry
+inventory/hosts             # generated file, not source
+
+# OS
+.DS_Store
+.env
