@@ -6,7 +6,7 @@ terraform {
     key            = "dev/terraform.tfstate"              # path inside bucket
     region         = "eu-central-1"
     encrypt        = true
-    dynamodb_table = "gitops-platform-tf-lock"
     profile        = "sofa"
+    use_lockfile   = true 
   }
 }
