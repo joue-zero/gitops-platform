@@ -3,39 +3,45 @@ name: CI — Build and push to ECR
 on:
   push:
     branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/ci.yml'
   pull_request:
     branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/ci.yml'
 
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
   ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY_URL }}
 
 jobs:
-    test:
-      name: Run tests
-      runs-on: ubuntu-latest
-      steps:
-      - uses: actions/checkout@v4
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
 
-      - name: Set up Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: app/package-lock.json
+    - name: Set up Node
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+        cache-dependency-path: app/package-lock.json
 
-      - name: Install dependencies
-        run: npm ci
-        working-directory: app
+    - name: Install dependencies
+      run: npm ci
+      working-directory: app
 
-      - name: Run tests
-        run: npm test
-        working-directory: app
-        
+    - name: Run tests
+      run: npm test
+      working-directory: app
+
   build-and-push:
     name: Build, test, push
     runs-on: ubuntu-latest
-
+    needs: test
     # Required for OIDC token generation
     permissions:
       id-token: write
