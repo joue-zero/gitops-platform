@@ -1,36 +1,42 @@
-# ── Stage 1: builder ──────────────────────────────────
-FROM node:20-alpine AS builder
+# ── Stage 1: Dependencies ───────────────────────────────
+FROM node:20-alpine AS deps
 
 WORKDIR /app
 
-# Copy dependency manifests first (layer cache optimisation)
-# If package.json doesn't change, Docker reuses this layer
+# Copy dependency manifests first for layer caching
 COPY package*.json ./
-RUN npm ci --only=production
 
-# Now copy source
-COPY . .
+# Clean install of production dependencies only
+RUN npm ci --omit=dev
 
-# ── Stage 2: production ───────────────────────────────
+# ── Stage 2: Production ───────────────────────────────
 FROM node:20-alpine AS production
 
-# Security: don't run as root
-RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+# Install dumb-init to properly handle PID 1 signals
+RUN apk add --no-cache dumb-init
+
+# Set production environment variables
+ENV NODE_ENV=production
+ENV PORT=8080
 
 WORKDIR /app
 
-# Copy only what production needs from builder
-COPY --from=builder --chown=appuser:appgroup /app/node_modules ./node_modules
-COPY --from=builder --chown=appuser:appgroup /app/index.js .
-COPY --from=builder --chown=appuser:appgroup /app/package.json .
+# Copy production node_modules from the 'deps' stage
+# We use the built-in 'node' user that comes with the node:alpine image
+COPY --from=deps --chown=node:node /app/node_modules ./node_modules
+COPY --chown=node:node package.json ./
 
-USER appuser
+# Copy ONLY our application source code
+COPY --chown=node:node src/ ./src/
 
-ENV NODE_ENV=production
-ENV PORT=8080
+# Switch to the built-in, unprivileged non-root user
+USER node
+
 EXPOSE 8080
 
-# Healthcheck — Docker and ECS use this to know if container is healthy
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3   CMD wget -qO- http://localhost:8080/health || exit 1
+# Healthcheck to let Docker/AWS know when the app is actually ready
+HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3 \
+  CMD wget -qO- http://localhost:8080/health || exit 1
 
-CMD ["node", "index.js"]
+# Wrap the node process with dumb-init and point directly to the server file
+CMD ["dumb-init", "node", "src/server.js"]
