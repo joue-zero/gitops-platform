@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phase 4 — GitOps & ArgoCD</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@300;400;500;600&family=Clash+Display:wght@700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@700;800&display=swap');
+
+:root {
+  --bg:      #07090D;
+  --s1:      #0B0F17;
+  --s2:      #0F1520;
+  --s3:      #141C2C;
+  --border:  #1A2438;
+  --border2: #253550;
+  --text:    #C4D4EC;
+  --muted:   #384C68;
+  --dim:     #1C2A40;
+  --acc:     #10B981;   /* ArgoCD green */
+  --acc2:    #34D399;
+  --blue:    #3B82F6;
+  --purple:  #8B5CF6;
+  --red:     #EF4444;
+  --yellow:  #F59E0B;
+  --cyan:    #06B6D4;
+  --orange:  #F97316;
+  --pink:    #EC4899;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Fira Code', monospace;
+  min-height: 100vh;
+}
+
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 2px; }
+
+/* ── SHELL ── */
+.shell {
+  display: grid;
+  grid-template-columns: 268px 1fr;
+  min-height: 100vh;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  background: var(--s1);
+  border-right: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sb-head {
+  padding: 22px 18px 16px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.phase-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--acc2);
+  margin-bottom: 8px;
+}
+
+.phase-badge::before {
+  content: '';
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--acc);
+  box-shadow: 0 0 8px var(--acc);
+}
+
+.sb-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 17px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.sb-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 10px;
+}
+
+.pill {
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 2px;
+  border: 1px solid;
+}
+
+.pill.git    { color: var(--orange); border-color: #5A2800; background: #180B00; }
+.pill.argo   { color: var(--acc2);   border-color: #0A4A30; background: #02120A; }
+.pill.k8s    { color: #60A5FA;       border-color: #1A3A6A; background: #04101E; }
+.pill.week   { color: var(--purple); border-color: #3A1A6A; background: #0E0420; }
+
+.prog-wrap {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.prog-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.prog-track { height: 2px; background: var(--border); border-radius: 1px; }
+.prog-fill  {
+  height: 100%;
+  background: linear-gradient(90deg, var(--acc), var(--acc2));
+  border-radius: 1px;
+  transition: width 0.4s;
+}
+
+.nav-scroll { flex: 1; overflow-y: auto; padding: 8px 0; }
+
+.nav-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 8px 18px;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: all 0.15s;
+}
+
+.nav-item:hover { background: var(--s2); }
+.nav-item.active { background: var(--s2); border-left-color: var(--acc); }
+.nav-item.done .nn { background: var(--acc); color: #000; }
+
+.nn {
+  width: 18px; height: 18px;
+  border-radius: 2px;
+  background: var(--dim);
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+  transition: all 0.2s;
+}
+
+.nav-item.active .nn { background: var(--acc); color: #000; }
+
+.nt { flex: 1; min-width: 0; }
+.ntitle { font-size: 11px; font-weight: 500; color: var(--text); line-height: 1.35; }
+.nav-item.active .ntitle { color: #fff; }
+.nsub { font-size: 9px; color: var(--muted); margin-top: 1px; }
+
+.ntag {
+  font-size: 8px;
+  padding: 1px 5px;
+  border-radius: 1px;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+  margin-top: 2px;
+  align-self: flex-start;
+}
+
+.ntag.argo  { background: #02120A; color: var(--acc2); }
+.ntag.git   { background: #180B00; color: var(--orange); }
+.ntag.k8s   { background: #04101E; color: #60A5FA; }
+.ntag.deep  { background: #1A0430; color: var(--pink); }
+.ntag.tf    { background: #041404; color: #4ADE80; }
+
+/* ── MAIN ── */
+.main { display: flex; flex-direction: column; min-height: 100vh; }
+
+.main-head {
+  padding: 26px 36px 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--s1);
+  flex-shrink: 0;
+}
+
+.eyebrow {
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--acc2);
+  margin-bottom: 7px;
+}
+
+.headline {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+
+.step-desc {
+  font-size: 12px;
+  color: #4A6080;
+  line-height: 1.9;
+  max-width: 660px;
+}
+
+.tag-row { display: flex; gap: 5px; margin-top: 12px; flex-wrap: wrap; }
+
+.tag {
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 2px;
+  border: 1px solid;
+}
+
+.tag.gitops  { color: var(--orange); border-color: #5A2800; background: #180B00; }
+.tag.argo    { color: var(--acc2);   border-color: #0A4A30; background: #02120A; }
+.tag.k8s     { color: #60A5FA;       border-color: #1A3A6A; background: #04101E; }
+.tag.concept { color: var(--pink);   border-color: #5A1A40; background: #180410; }
+.tag.bash    { color: #FDE68A;       border-color: #5A3A00; background: #180E00; }
+.tag.tf      { color: #4ADE80;       border-color: #0A3A10; background: #021006; }
+.tag.ci      { color: var(--purple); border-color: #3A1A6A; background: #0E0420; }
+
+/* ── CONTENT ── */
+.content {
+  flex: 1;
+  padding: 20px 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+/* ── CHUNK ── */
+.chunk { border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+
+.chunk-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 15px;
+  cursor: pointer;
+  background: var(--s1);
+  transition: background 0.15s;
+  user-select: none;
+}
+
+.chunk-head:hover { background: var(--s2); }
+.chunk.open .chunk-head { background: var(--s2); border-bottom: 1px solid var(--border); }
+
+.cdot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cdot.argo    { background: var(--acc); }
+.cdot.git     { background: var(--orange); }
+.cdot.k8s     { background: var(--blue); }
+.cdot.concept { background: var(--pink); }
+.cdot.bash    { background: var(--yellow); }
+.cdot.tf      { background: #4ADE80; }
+.cdot.check   { background: var(--acc); }
+.cdot.warn    { background: var(--red); }
+.cdot.ci      { background: var(--purple); }
+
+.clabel { flex: 1; font-size: 12px; font-weight: 500; color: #fff; line-height: 1.3; }
+
+.cbadge {
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 2px;
+}
+
+.cbadge.do      { background: #04101E; color: #60A5FA; }
+.cbadge.run     { background: #021006; color: #4ADE80; }
+.cbadge.deep    { background: #180410; color: var(--pink); }
+.cbadge.concept { background: #180410; color: var(--pink); }
+.cbadge.warn    { background: #1A0404; color: #F87171; }
+.cbadge.cv      { background: #02120A; color: var(--acc2); }
+.cbadge.ci      { background: #0E0420; color: var(--purple); }
+
+.cchev { font-size: 10px; color: var(--muted); transition: transform 0.2s; flex-shrink: 0; }
+.chunk.open .cchev { transform: rotate(180deg); }
+
+.chunk-body {
+  display: none;
+  padding: 18px;
+  background: var(--bg);
+  flex-direction: column;
+  gap: 13px;
+}
+
+.chunk.open .chunk-body { display: flex; }
+
+/* ── CODE ── */
+.cw { background: var(--s1); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+
+.cbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: var(--s2);
+  border-bottom: 1px solid var(--border);
+}
+
+.cfile { font-size: 10px; color: var(--muted); letter-spacing: 0.05em; }
+
+.copybtn {
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border: 1px solid var(--border2);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.copybtn:hover { color: var(--text); border-color: var(--muted); }
+.copybtn.ok { color: var(--acc2); border-color: var(--acc2); }
+
+pre {
+  padding: 14px;
+  overflow-x: auto;
+  font-size: 11.5px;
+  line-height: 1.8;
+  color: var(--text);
+  font-family: 'Fira Code', monospace;
+}
+
+.cm { color: #263A52; font-style: italic; }
+.ck { color: #60A5FA; }
+.cv { color: #4ADE80; }
+.cs { color: #FCD34D; }
+.cf { color: #F87171; }
+.cp { color: #C084FC; }
+.co { color: var(--orange); }
+.cg { color: var(--acc2); }
+
+/* ── PROSE ── */
+.prose {
+  font-size: 12px;
+  color: #4A6080;
+  line-height: 1.9;
+}
+
+.prose strong { color: var(--text); font-weight: 500; }
+.prose code {
+  background: var(--s2);
+  border: 1px solid var(--border);
+  padding: 1px 5px;
+  border-radius: 2px;
+  font-size: 11px;
+  color: var(--cyan);
+}
+
+/* ── ANALOGY ── */
+.analogy {
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.analogy-head {
+  background: var(--s3);
+  padding: 7px 13px;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--pink);
+  border-bottom: 1px solid var(--border);
+}
+
+.analogy-body {
+  padding: 12px 14px;
+  font-size: 12px;
+  color: #4A6080;
+  line-height: 1.9;
+  background: #070408;
+}
+
+.analogy-body strong { color: #9A80C0; font-weight: 500; }
+
+/* ── COMPARE TABLE ── */
+.cmp { border: 1px solid var(--border); border-radius: 3px; overflow: hidden; font-size: 11px; }
+
+.crow {
+  display: grid;
+  border-bottom: 1px solid var(--border);
+}
+
+.crow:last-child { border-bottom: none; }
+.crow.head { background: var(--s2); }
+.crow.col2 { grid-template-columns: 1fr 1fr; }
+.crow.col3 { grid-template-columns: 1fr 1fr 1fr; }
+
+.ccell {
+  padding: 9px 12px;
+  border-right: 1px solid var(--border);
+  line-height: 1.6;
+  color: #4A6080;
+}
+
+.ccell:last-child { border-right: none; }
+.crow.head .ccell { color: var(--muted); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; }
+.ccell.hl  { color: var(--acc2); }
+.ccell.hl2 { color: #60A5FA; }
+.ccell.hl3 { color: var(--orange); }
+
+/* ── FLOW DIAGRAM ── */
+.flow {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 14px;
+  font-size: 11.5px;
+  line-height: 2;
+}
+
+/* ── WHY ── */
+.why {
+  border-left: 2px solid var(--acc);
+  padding: 11px 14px;
+  background: #020C08;
+  border-radius: 0 3px 3px 0;
+}
+
+.why-lbl {
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--acc2);
+  margin-bottom: 5px;
+}
+
+.why p { font-size: 12px; color: #3A6050; line-height: 1.85; }
+.why p strong { color: #5A9070; font-weight: 500; }
+
+/* ── CALLOUT ── */
+.callout {
+  border-radius: 3px;
+  padding: 10px 13px;
+  font-size: 12px;
+  line-height: 1.75;
+  display: flex;
+  gap: 9px;
+  align-items: flex-start;
+}
+
+.callout.info    { background: #030C16; border: 1px solid #0C2240; color: #60A5FA; }
+.callout.warn    { background: #120900; border: 1px solid #382200; color: #D4A017; }
+.callout.success { background: #020A06; border: 1px solid #082418; color: #4ADE80; }
+.callout.deep    { background: #0C0318; border: 1px solid #2A0860; color: var(--purple); }
+
+.cico { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+
+/* ── FILE TREE ── */
+.ftree {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 12px 14px;
+  font-size: 11.5px;
+  line-height: 2;
+}
+
+.ftree .dir  { color: #fff; font-weight: 500; }
+.ftree .yml  { color: #60A5FA; }
+.ftree .tf   { color: #4ADE80; }
+.ftree .new  { color: var(--dim); font-style: italic; font-size: 10px; }
+.ftree .argo { color: var(--acc2); }
+
+/* ── CHECKLIST ── */
+.chklist { display: flex; flex-direction: column; gap: 5px; }
+
+.chk {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  font-size: 12px;
+  color: #4A6080;
+  line-height: 1.5;
+  padding: 7px 12px;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+.chk .ci { color: var(--acc2); flex-shrink: 0; }
+.chk .ca { color: var(--orange); flex-shrink: 0; }
+
+/* ── BOT NAV ── */
+.bot-nav {
+  padding: 14px 36px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  background: var(--s1);
+  flex-shrink: 0;
+}
+
+.nbtn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: 'Fira Code', monospace;
+  font-size: 11px;
+  padding: 9px 18px;
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.nbtn:hover { background: var(--s2); border-color: var(--muted); }
+.nbtn:disabled { opacity: 0.2; cursor: default; }
+
+.nbtn.primary {
+  background: var(--acc);
+  border-color: var(--acc);
+  color: #000;
+  font-weight: 600;
+}
+
+.nbtn.primary:hover { background: var(--acc2); border-color: var(--acc2); }
+
+.step-lbl { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="sidebar">
+  <div class="sb-head">
+    <div class="phase-badge">Phase 4</div>
+    <div class="sb-title">GitOps &amp; ArgoCD</div>
+    <div class="sb-pills">
+      <span class="pill week">Week 6</span>
+      <span class="pill git">GitOps</span>
+      <span class="pill argo">ArgoCD</span>
+      <span class="pill k8s">Kubernetes</span>
+    </div>
+  </div>
+  <div class="prog-wrap">
+    <div class="prog-row"><span>progress</span><span id="prog-txt">0 / 10</span></div>
+    <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+  </div>
+  <nav class="nav-scroll" id="nav-scroll"></nav>
+</aside>
+
+<div class="main">
+  <div class="main-head" id="main-head"></div>
+  <div class="content" id="content"></div>
+  <div class="bot-nav">
+    <button class="nbtn" id="btn-prev" onclick="go(-1)">← prev</button>
+    <span class="step-lbl" id="step-lbl"></span>
+    <button class="nbtn primary" id="btn-next" onclick="go(1)">next →</button>
+  </div>
+</div>
+
+</div>
+<script>
+const STEPS = [
+
+// ── 0 ─────────────────────────────────────────────────────
+{
+  title:"What Phase 4 builds", sub:"overview",
+  eyebrow:"Phase 4 · Overview", headline:"GitOps &amp; ArgoCD",
+  desc:"Phase 3 gave you a Helm chart and a manual deploy command. Phase 4 removes the manual part entirely. You will learn what GitOps actually means from first principles, then install ArgoCD, wire it to your Helm chart repo, and watch the cluster self-heal to match whatever is in Git — automatically.",
+  tags:["gitops","argo","concept"],
+  tag:"argo",
+  chunks:[
+    {
+      dot:"argo", label:"What you will have at the end of Phase 4", badge:"overview", bt:"concept",
+      body:`<div class="ftree">
+devops-platform/
+├── <span class="dir">.github/workflows/</span>
+│   └── <span class="yml">ci.yml</span>             <span class="new"># updated: pushes image SHA to gitops repo</span>
+└── <span class="argo">gitops-config/</span>         <span class="new"># NEW: separate repo for cluster state</span>
+    ├── <span class="dir">apps/</span>
+    │   └── <span class="yml">app-of-apps.yaml</span>   <span class="new"># ArgoCD root application</span>
+    └── <span class="dir">environments/</span>
+        ├── <span class="dir">staging/</span>
+        │   └── <span class="yml">values.yaml</span>    <span class="new"># staging image tag lives here</span>
+        └── <span class="dir">prod/</span>
+            └── <span class="yml">values.yaml</span>    <span class="new"># prod image tag lives here</span>
+</div>
+<div class="callout deep"><span class="cico">◈</span><div>ArgoCD is installed inside your EKS cluster. It watches the gitops-config repo. When anything changes in that repo — including the image tag — ArgoCD detects the diff and syncs the cluster automatically. You never run <code>helm upgrade</code> manually again.</div></div>`
+    },
+    {
+      dot:"concept", label:"The full end-to-end flow after Phase 4", badge:"concept", bt:"concept",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">complete automated flow</span></div><pre>
+git push origin main           <span class="cm"># developer pushes code</span>
+        │
+        ▼
+GitHub Actions (CI)
+  ├── run tests
+  ├── build Docker image
+  ├── push to ECR → app:a3f9c12
+  └── update gitops-config/environments/prod/values.yaml
+        image.tag: a3f9c12    <span class="cm"># ← only change in gitops repo</span>
+        │
+        ▼
+ArgoCD detects git diff in gitops-config repo
+        │
+        ▼
+ArgoCD renders Helm chart with new values
+        │
+        ▼
+ArgoCD applies diff to EKS cluster
+        │
+        ▼
+Kubernetes rolling update → new pods running
+        │
+        ▼
+ArgoCD marks sync as Healthy ✓
+
+<span class="cm"># Zero manual commands after git push</span>
+<span class="cm"># Full audit trail in Git history</span>
+<span class="cm"># Rollback = git revert → ArgoCD re-syncs</span>
+</pre></div>`
+    }
+  ]
+},
+
+// ── 1 ─────────────────────────────────────────────────────
+{
+  title:"GitOps from first principles", sub:"deep dive",
+  eyebrow:"Step 1 — Deep Dive", headline:"What GitOps actually is",
+  desc:"GitOps is a word that gets thrown around a lot. Most explanations are vague. This step gives you the precise mental model — what it means, why it was invented, and what problem it solves that traditional CI/CD doesn't.",
+  tags:["gitops","concept"],
+  tag:"deep",
+  chunks:[
+    {
+      dot:"concept", label:"The problem with traditional CI/CD — push-based deployment", badge:"deep dive", bt:"deep",
+      body:`<div class="analogy">
+  <div class="analogy-head">Traditional CI/CD (push model)</div>
+  <div class="analogy-body">
+    In a traditional pipeline: CI builds the image → CI runs <code>kubectl apply</code> or <code>helm upgrade</code> directly against the cluster. CI <strong>pushes</strong> changes to the cluster.<br><br>
+    The problems with this:<br>
+    1. <strong>CI needs cluster credentials</strong> — a kubeconfig or service account token stored as a secret. Leaked once, attacker has cluster access.<br>
+    2. <strong>Cluster state drifts silently</strong> — someone runs <code>kubectl edit deployment</code> manually, now what's in the cluster is different from what's in code. Nobody knows.<br>
+    3. <strong>No single source of truth</strong> — you can't look at one place and know exactly what's running in the cluster.<br>
+    4. <strong>Rollback is manual</strong> — you have to figure out what the previous values were and re-run the pipeline.
+  </div>
+</div>`,
+      why:"Every one of these problems is real and has caused production incidents. GitOps was invented specifically to solve them. Understanding the problems first makes the solution obvious."
+    },
+    {
+      dot:"concept", label:"GitOps — the pull model. Git as the source of truth.", badge:"deep dive", bt:"deep",
+      body:`<div class="analogy">
+  <div class="analogy-head">GitOps (pull model)</div>
+  <div class="analogy-body">
+    GitOps inverts the flow. Instead of CI pushing to the cluster, an <strong>agent running inside the cluster</strong> (ArgoCD) constantly watches a Git repo. When the repo changes, the agent pulls the change and applies it.<br><br>
+    <strong>The cluster is the consumer of Git, not the target of CI.</strong><br><br>
+    Think of it like this: your cluster has a standing order — "always look like what's in this Git repo." If someone manually changes something in the cluster, ArgoCD detects the drift and reverts it. Git always wins.
+  </div>
+</div>
+<div class="cw"><div class="cbar"><span class="cfile">the four GitOps principles (from OpenGitOps)</span></div><pre>
+1. Declarative    → describe desired state, not steps to get there
+                    (Kubernetes YAML / Helm values = declarations)
+
+2. Versioned      → all desired state stored in Git
+                    (full history, audit trail, rollback = git revert)
+
+3. Pulled         → agent inside cluster pulls from Git
+                    (not CI pushing in — cluster drives itself)
+
+4. Continuously   → agent reconciles continuously, not on-demand
+  reconciled        (drift detected and corrected automatically)
+</pre></div>`,
+      why:"<strong>Principle 4 is the one people miss.</strong> ArgoCD doesn't just sync on push — it checks the cluster every 3 minutes even with no new commits. If someone runs <code>kubectl delete pod</code> or <code>kubectl edit deployment</code> manually, ArgoCD detects the drift and reverts it. The cluster is self-healing."
+    },
+    {
+      dot:"concept", label:"The two-repo pattern — why you separate app code from cluster config", badge:"deep dive", bt:"deep",
+      body:`<div class="prose">You will notice Phase 4 uses <strong>two separate repos</strong>: your app code repo (<code>devops-platform</code>) and a new config repo (<code>gitops-config</code>). This is intentional and important.</div>
+<div class="cmp">
+  <div class="crow col2 head">
+    <div class="ccell">One repo (wrong)</div>
+    <div class="ccell">Two repos (correct)</div>
+  </div>
+  <div class="crow col2">
+    <div class="ccell">App code and k8s config change together</div>
+    <div class="ccell">App code changes independently from deployment config</div>
+  </div>
+  <div class="crow col2">
+    <div class="ccell">Every code commit triggers a deploy</div>
+    <div class="ccell">Deploy is a separate, deliberate action</div>
+  </div>
+  <div class="crow col2">
+    <div class="ccell">Config history mixed with code history</div>
+    <div class="ccell">Clean audit trail — config repo shows only deploys</div>
+  </div>
+  <div class="crow col2">
+    <div class="ccell">Rollback = revert code AND config</div>
+    <div class="ccell">Rollback = git revert in config repo only</div>
+  </div>
+  <div class="crow col2">
+    <div class="ccell">CI needs write access to cluster</div>
+    <div class="ccell">CI only needs write access to config repo</div>
+  </div>
+</div>`,
+      why:"The config repo becomes the authoritative record of <strong>every deploy ever made</strong>. You can look at its git log and see exactly what image was running in prod on any given date. This is the audit trail compliance teams require."
+    },
+    {
+      dot:"concept", label:"What ArgoCD is — the agent that implements GitOps", badge:"deep dive", bt:"deep",
+      body:`<div class="analogy">
+  <div class="analogy-head">Mental model — what ArgoCD does</div>
+  <div class="analogy-body">
+    ArgoCD is a Kubernetes controller (a process running inside your cluster) that does one thing in a loop:<br><br>
+    1. Read desired state from Git (your Helm chart + values)<br>
+    2. Read actual state from the cluster (what's currently deployed)<br>
+    3. Compare the two<br>
+    4. If they differ → apply the Git version to the cluster<br>
+    5. Wait 3 minutes, repeat<br><br>
+    <strong>ArgoCD is the reconciliation loop made visible.</strong> It has a UI where you can see every resource in the cluster, whether it's in sync with Git, and why it's drifting if it is.
+  </div>
+</div>
+<div class="cw"><div class="cbar"><span class="cfile">ArgoCD core concepts</span></div><pre>
+Application   → an ArgoCD object that links a Git repo path
+                to a Kubernetes namespace. "Watch this repo,
+                deploy to this namespace."
+
+Sync          → the act of making the cluster match Git.
+                Can be automatic or manual.
+
+OutOfSync     → cluster state differs from Git. ArgoCD
+                shows this immediately in the UI.
+
+Healthy       → all pods running, all resources ready.
+
+App of Apps   → one ArgoCD Application that deploys other
+                Applications. Manages multiple services
+                from one root manifest.
+</pre></div>`
+    }
+  ]
+},
+
+// ── 2 ─────────────────────────────────────────────────────
+{
+  title:"Create the GitOps config repo", sub:"repo setup",
+  eyebrow:"Step 2", headline:"Set up the config repo",
+  desc:"The config repo is separate from your app code. It contains only Helm values files — no application code, no Dockerfiles. CI writes to it. ArgoCD reads from it.",
+  tags:["gitops","bash"],
+  tag:"git",
+  chunks:[
+    {
+      dot:"git", label:"Create and structure the gitops-config repo", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal — on GitHub: create a new repo named gitops-config, then:</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+git clone https://github.com/YOUR_USERNAME/gitops-config.git
+cd gitops-config
+
+mkdir -p apps
+mkdir -p environments/{staging,prod}
+
+touch apps/app-of-apps.yaml
+touch environments/staging/values.yaml
+touch environments/prod/values.yaml
+
+git add . && git commit -m "init: gitops config structure"
+git push origin main
+</pre></div>`
+    },
+    {
+      dot:"git", label:"environments/staging/values.yaml", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">gitops-config/environments/staging/values.yaml</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># This file is the ONLY thing CI changes on each deploy.</span>
+<span class="cm"># ArgoCD reads this and renders the Helm chart with these values.</span>
+
+image:
+  repository: 123456789012.dkr.ecr.eu-central-1.amazonaws.com/devops-platform/app
+  tag: latest        <span class="cm"># CI will update this to the git SHA on each push</span>
+
+replicaCount: 1
+
+ingress:
+  enabled: true
+  host: staging.devops-platform.com
+
+autoscaling:
+  enabled: false
+
+env:
+  NODE_ENV: staging
+  PORT: "8080"
+</pre></div>`
+    },
+    {
+      dot:"git", label:"environments/prod/values.yaml", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">gitops-config/environments/prod/values.yaml</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+image:
+  repository: 123456789012.dkr.ecr.eu-central-1.amazonaws.com/devops-platform/app
+  tag: latest        <span class="cm"># CI updates this — but only after staging is healthy</span>
+
+replicaCount: 3
+
+ingress:
+  enabled: true
+  host: app.devops-platform.com
+  tls: false
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+
+env:
+  NODE_ENV: production
+  PORT: "8080"
+</pre></div>`,
+      why:"Prod and staging point at the same Helm chart in your app repo but use different values files. Staging gets the new image first. Only after it's healthy does CI update the prod values file — giving you an automatic promotion gate."
+    }
+  ]
+},
+
+// ── 3 ─────────────────────────────────────────────────────
+{
+  title:"Install ArgoCD on EKS", sub:"installation",
+  eyebrow:"Step 3", headline:"Install &amp; access ArgoCD",
+  desc:"ArgoCD installs as a set of pods in your cluster. It comes with a web UI, a CLI, and a set of Custom Resource Definitions (CRDs) that extend Kubernetes with ArgoCD-specific objects like Application.",
+  tags:["argo","bash","k8s"],
+  tag:"argo",
+  chunks:[
+    {
+      dot:"argo", label:"Install ArgoCD into its own namespace", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Create namespace</span>
+kubectl create namespace argocd
+
+<span class="cm"># Install ArgoCD (official manifest — this installs everything)</span>
+kubectl apply -n argocd -f \
+  https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+
+<span class="cm"># Wait for all pods to be running (takes 2-3 min)</span>
+kubectl wait --for=condition=Ready pods --all -n argocd --timeout=300s
+
+<span class="cm"># Verify</span>
+kubectl get pods -n argocd
+<span class="cm"># argocd-application-controller   Running
+# argocd-dex-server               Running
+# argocd-redis                     Running
+# argocd-repo-server               Running
+# argocd-server                    Running</span>
+</pre></div>`
+    },
+    {
+      dot:"argo", label:"Access the ArgoCD UI", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Port-forward to access the UI locally (no LoadBalancer needed)</span>
+kubectl port-forward svc/argocd-server -n argocd 8080:443
+
+<span class="cm"># Open: https://localhost:8080</span>
+<span class="cm"># Username: admin</span>
+<span class="cm"># Password: (run this command to get it)</span>
+kubectl -n argocd get secret argocd-initial-admin-secret \
+  -o jsonpath="{.data.password}" | base64 -d && echo
+</pre></div>
+<div class="callout warn"><span class="cico">⚠</span><div>Change the admin password immediately after first login. Go to User Info → Update Password in the UI. The initial secret is not rotated automatically.</div></div>`
+    },
+    {
+      dot:"argo", label:"Install the ArgoCD CLI", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># macOS</span>
+brew install argocd
+
+<span class="cm"># Linux</span>
+curl -sSL -o argocd-linux-amd64 \
+  https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
+
+<span class="cm"># Login via CLI</span>
+argocd login localhost:8080 --username admin --password &lt;password&gt; --insecure
+
+<span class="cm"># Register your EKS cluster with ArgoCD</span>
+argocd cluster add $(kubectl config current-context) --name devops-platform
+</pre></div>`
+    },
+    {
+      dot:"argo", label:"Connect ArgoCD to your gitops-config repo", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># For a public repo — no credentials needed</span>
+argocd repo add https://github.com/YOUR_USERNAME/gitops-config
+
+<span class="cm"># For a private repo — use a GitHub personal access token</span>
+argocd repo add https://github.com/YOUR_USERNAME/gitops-config \
+  --username YOUR_USERNAME \
+  --password &lt;github_pat&gt;
+
+<span class="cm"># Verify repo is connected</span>
+argocd repo list
+<span class="cm"># TYPE  NAME  REPO                                    STATUS
+# git         https://github.com/.../gitops-config  Successful</span>
+</pre></div>`,
+      why:"ArgoCD pulls from your repo using credentials you provide. For production, use a <strong>deploy key</strong> (SSH key with read-only access to the repo) rather than a personal access token. A deploy key cannot access any other repo even if stolen."
+    }
+  ]
+},
+
+// ── 4 ─────────────────────────────────────────────────────
+{
+  title:"ArgoCD Application — deep dive", sub:"deep dive",
+  eyebrow:"Step 4 — Deep Dive", headline:"The ArgoCD Application object",
+  desc:"An ArgoCD Application is a Custom Resource (a new Kubernetes object type added by ArgoCD). It is the link between a Git repo path and a cluster namespace. Understanding every field before you write one is essential.",
+  tags:["argo","concept"],
+  tag:"deep",
+  chunks:[
+    {
+      dot:"concept", label:"What an ArgoCD Application YAML actually says", badge:"deep dive", bt:"deep",
+      body:`<div class="prose">An ArgoCD <code>Application</code> answers four questions:<br><br>
+1. <strong>Where is the desired state?</strong> (which Git repo and which path inside it)<br>
+2. <strong>How do I render it?</strong> (raw YAML, Helm chart, Kustomize)<br>
+3. <strong>Where do I deploy it?</strong> (which cluster and namespace)<br>
+4. <strong>When do I sync?</strong> (automatically on change, or wait for manual approval)</div>`,
+      why:"Every field in an Application YAML maps to one of these four questions. Once you understand the questions, the YAML is obvious."
+    },
+    {
+      dot:"argo", label:"Write the Application for staging", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">gitops-config/apps/staging.yaml</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+apiVersion: argoproj.io/v1alpha1
+kind: Application              <span class="cm"># ArgoCD CRD — not a native K8s object</span>
+metadata:
+  name: app-staging
+  namespace: argocd            <span class="cm"># ArgoCD Applications always live in argocd namespace</span>
+spec:
+
+  <span class="cm"># ── QUESTION 1: where is desired state? ──────────────</span>
+  source:
+    repoURL: https://github.com/YOUR_USERNAME/devops-platform
+    targetRevision: HEAD       <span class="cm"># always use the latest commit on main</span>
+    path: helm/app             <span class="cm"># path inside the repo where Chart.yaml lives</span>
+
+    <span class="cm"># How to render: Helm with values override from gitops-config repo</span>
+    helm:
+      valueFiles:
+        - https://raw.githubusercontent.com/YOUR_USERNAME/gitops-config/main/environments/staging/values.yaml
+
+  <span class="cm"># ── QUESTION 3: where to deploy? ─────────────────────</span>
+  destination:
+    server: https://kubernetes.default.svc  <span class="cm"># the cluster ArgoCD runs in</span>
+    namespace: staging
+
+  <span class="cm"># ── QUESTION 4: when to sync? ────────────────────────</span>
+  syncPolicy:
+    automated:
+      prune: true    <span class="cm"># delete resources removed from Git</span>
+      selfHeal: true <span class="cm"># revert manual changes to match Git</span>
+    syncOptions:
+      - CreateNamespace=true  <span class="cm"># create namespace if it doesn't exist</span>
+</pre></div>`,
+      why:"<strong><code>selfHeal: true</code> is the GitOps killer feature.</strong> If anyone runs <code>kubectl edit deployment</code> and changes something, ArgoCD will detect the drift within 3 minutes and revert it. Git always wins. This is what makes the system truly declarative."
+    },
+    {
+      dot:"argo", label:"Write the Application for production", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">gitops-config/apps/prod.yaml</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: app-prod
+  namespace: argocd
+spec:
+  source:
+    repoURL: https://github.com/YOUR_USERNAME/devops-platform
+    targetRevision: HEAD
+    path: helm/app
+    helm:
+      valueFiles:
+        - https://raw.githubusercontent.com/YOUR_USERNAME/gitops-config/main/environments/prod/values.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: prod
+
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+</pre></div>`
+    },
+    {
+      dot:"argo", label:"Apply the Applications to the cluster", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Apply both Application manifests</span>
+kubectl apply -f gitops-config/apps/staging.yaml
+kubectl apply -f gitops-config/apps/prod.yaml
+
+<span class="cm"># Check status via CLI</span>
+argocd app list
+<span class="cm"># NAME          CLUSTER     NAMESPACE  PROJECT  STATUS  HEALTH
+# app-staging   in-cluster  staging    default  Synced  Healthy
+# app-prod      in-cluster  prod       default  Synced  Healthy</span>
+
+<span class="cm"># Watch sync in real time</span>
+argocd app get app-staging --watch
+</pre></div>`
+    }
+  ]
+},
+
+// ── 5 ─────────────────────────────────────────────────────
+{
+  title:"App of Apps pattern", sub:"deep dive",
+  eyebrow:"Step 5 — Deep Dive", headline:"App of Apps",
+  desc:"Right now you apply Application YAMLs manually with kubectl. In a real setup you don't manage ArgoCD Applications manually — you manage them with ArgoCD itself. That's the App of Apps pattern.",
+  tags:["argo","concept"],
+  tag:"deep",
+  chunks:[
+    {
+      dot:"concept", label:"Why App of Apps exists — the bootstrapping problem", badge:"deep dive", bt:"deep",
+      body:`<div class="analogy">
+  <div class="analogy-head">The problem</div>
+  <div class="analogy-body">
+    You have 5 services: app, api, worker, scheduler, admin. Each has its own ArgoCD Application. Without App of Apps you apply all 5 manually with kubectl. When you add a 6th service you apply it manually. When you set up a new cluster you apply all 6 manually.<br><br>
+    <strong>App of Apps: one root Application that points to a directory of other Application YAMLs.</strong> ArgoCD deploys the root, the root deploys all the children. You apply one thing, everything else is automated.<br><br>
+    Think of it like a Terraform root module that calls sub-modules — one entry point, everything else is managed.
+  </div>
+</div>`
+    },
+    {
+      dot:"argo", label:"Write the App of Apps root manifest", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">gitops-config/apps/app-of-apps.yaml</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: app-of-apps
+  namespace: argocd
+spec:
+  source:
+    repoURL: https://github.com/YOUR_USERNAME/gitops-config
+    targetRevision: HEAD
+    path: apps              <span class="cm"># watches the /apps directory in gitops-config</span>
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd       <span class="cm"># child Applications also land in argocd namespace</span>
+
+  syncPolicy:
+    automated:
+      prune: true           <span class="cm"># if you delete staging.yaml from /apps, ArgoCD</span>
+      selfHeal: true        <span class="cm"># deletes the staging Application automatically</span>
+    syncOptions:
+      - CreateNamespace=true
+</pre></div>`,
+      why:"Now the workflow is: add a new service → add its Application YAML to <code>gitops-config/apps/</code> → push to Git → ArgoCD automatically picks it up and deploys it. No kubectl apply needed ever again. <strong>This is the bootstrap pattern used by every serious GitOps setup.</strong>"
+    },
+    {
+      dot:"argo", label:"Bootstrap — apply the root app once, then never touch kubectl for apps again", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal — ONE TIME ONLY</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Delete the manually applied apps first</span>
+kubectl delete -f gitops-config/apps/staging.yaml
+kubectl delete -f gitops-config/apps/prod.yaml
+
+<span class="cm"># Apply ONLY the root app-of-apps</span>
+kubectl apply -f gitops-config/apps/app-of-apps.yaml
+
+<span class="cm"># ArgoCD now deploys staging.yaml and prod.yaml automatically
+# because they live in the /apps directory it watches</span>
+
+argocd app list
+<span class="cm"># NAME          STATUS  HEALTH
+# app-of-apps   Synced  Healthy     ← the root
+# app-staging   Synced  Healthy     ← deployed by root
+# app-prod      Synced  Healthy     ← deployed by root</span>
+</pre></div>`
+    }
+  ]
+},
+
+// ── 6 ─────────────────────────────────────────────────────
+{
+  title:"Update CI to write to the config repo", sub:"ci integration",
+  eyebrow:"Step 6", headline:"CI writes image tag to Git",
+  desc:"The final wiring: when GitHub Actions pushes a new image to ECR, it also updates the image tag in the gitops-config repo. ArgoCD detects the change and deploys. This is the handoff between CI and CD.",
+  tags:["ci","gitops","bash"],
+  tag:"git",
+  chunks:[
+    {
+      dot:"concept", label:"The CI/CD split — what CI does vs what CD does", badge:"concept", bt:"concept",
+      body:`<div class="cmp">
+  <div class="crow col2 head">
+    <div class="ccell">CI (GitHub Actions)</div>
+    <div class="ccell">CD (ArgoCD)</div>
+  </div>
+  <div class="crow col2">
+    <div class="ccell hl3">Runs on: github.com</div>
+    <div class="ccell hl">Runs on: inside EKS cluster</div>
+  </div>
+  <div class="crow col2">
+    <div class="ccell hl3">Trigger: git push to app repo</div>
+    <div class="ccell hl">Trigger: git change in config repo</div>
+  </div>
+  <div class="crow col2">
+    <div class="ccell hl3">Does: test, build, push to ECR, update config repo</div>
+    <div class="ccell hl">Does: render Helm, apply to cluster, health check</div>
+  </div>
+  <div class="crow col2">
+    <div class="ccell hl3">Needs: ECR write access (OIDC), config repo write access</div>
+    <div class="ccell hl">Needs: config repo read access, cluster access (it's inside the cluster)</div>
+  </div>
+</div>`,
+      why:"<strong>CI never touches the cluster directly.</strong> It only writes to a Git repo. This means if GitHub Actions is compromised, the attacker can update a config file but cannot run kubectl commands. The blast radius is limited."
+    },
+    {
+      dot:"ci", label:"Add a GitHub PAT secret for writing to gitops-config repo", badge:"do this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">GitHub → Settings → Developer settings → Personal access tokens → Fine-grained</span></div><pre>
+Token name:     gitops-config-writer
+Expiration:     90 days (rotate regularly)
+Repository:     gitops-config only
+Permissions:    Contents → Read and Write
+
+<span class="cm"># Then add to your app repo secrets:</span>
+<span class="cm"># GitHub → devops-platform repo → Settings → Secrets → Actions</span>
+Name:  GITOPS_TOKEN
+Value: &lt;the token you just created&gt;
+</pre></div>`,
+      why:"Fine-grained PATs scope access to one specific repo with one specific permission. Even if this token leaks, the attacker can only modify <code>gitops-config</code> — they cannot read your app code, access ECR, or touch the cluster."
+    },
+    {
+      dot:"ci", label:"Update .github/workflows/ci.yml — add deploy step", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">.github/workflows/ci.yml — add this job after build-and-push</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+  update-gitops:
+    name: Update GitOps config
+    runs-on: ubuntu-latest
+    needs: build-and-push            <span class="cm"># only runs if build succeeded</span>
+    if: github.ref == 'refs/heads/main'   <span class="cm"># only on main branch</span>
+
+    steps:
+      - name: Checkout gitops-config repo
+        uses: actions/checkout@v4
+        with:
+          repository: YOUR_USERNAME/gitops-config
+          token: \${{ secrets.GITOPS_TOKEN }}
+          path: gitops-config
+
+      - name: Update staging image tag
+        run: |
+          cd gitops-config
+
+          <span class="cm"># Use sed to update the image tag in staging values</span>
+          sed -i "s|tag:.*|tag: \${{ github.sha }}|" \
+            environments/staging/values.yaml
+
+          git config user.name  "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add environments/staging/values.yaml
+          git commit -m "deploy(staging): \${{ github.sha }}"
+          git push
+
+      <span class="cm"># Prod promotion happens separately — either manually</span>
+      <span class="cm"># or after staging health checks pass (Phase 4 extension)</span>
+</pre></div>`,
+      why:"The commit message <code>deploy(staging): a3f9c12</code> in the config repo is your deploy audit trail. Every deployment is a commit. You can run <code>git log</code> on the config repo and see every image that was ever deployed to staging, when, and triggered by which CI run."
+    },
+    {
+      dot:"argo", label:"What happens automatically after CI pushes", badge:"concept", bt:"concept",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">sequence after git push to app repo</span></div><pre>
+T+0s   GitHub Actions triggers
+T+60s  Tests pass, image built and pushed to ECR as app:a3f9c12
+T+90s  CI updates gitops-config/environments/staging/values.yaml
+       image.tag: a3f9c12
+T+91s  CI pushes commit to gitops-config repo
+
+T+180s ArgoCD polls gitops-config repo (every 3 min by default)
+       or: webhook triggers immediate sync (recommended)
+T+181s ArgoCD detects values.yaml changed
+T+182s ArgoCD renders Helm chart with new tag
+T+183s ArgoCD diffs rendered manifests vs live cluster
+       → Deployment image changed: latest → a3f9c12
+T+184s ArgoCD applies Deployment update to cluster
+T+190s Kubernetes starts rolling update
+T+210s New pods healthy, old pods terminated
+T+211s ArgoCD marks app-staging as Synced + Healthy ✓
+
+<span class="cm"># Zero manual steps after git push</span>
+</pre></div>`
+    },
+    {
+      dot:"argo", label:"Set up ArgoCD webhook for instant sync (optional but recommended)", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal + GitHub settings</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Get ArgoCD server URL (after exposing it via LoadBalancer or ingress)</span>
+ARGOCD_URL=https://argocd.devops-platform.com/
+
+<span class="cm"># In your gitops-config repo on GitHub:</span>
+<span class="cm"># Settings → Webhooks → Add webhook</span>
+Payload URL:  \${ARGOCD_URL}/api/webhook
+Content type: application/json
+Events:       Just the push event
+
+<span class="cm"># Now ArgoCD syncs immediately on every push</span>
+<span class="cm"># instead of waiting for the 3-minute poll interval</span>
+</pre></div>`
+    }
+  ]
+},
+
+// ── 7 ─────────────────────────────────────────────────────
+{
+  title:"Sync policies & rollback", sub:"operations",
+  eyebrow:"Step 7", headline:"Sync policies &amp; rollback",
+  desc:"Understanding sync policies and rollback is what separates someone who installed ArgoCD from someone who operates it. These are the controls you reach for when something goes wrong in production.",
+  tags:["argo","bash"],
+  tag:"argo",
+  chunks:[
+    {
+      dot:"argo", label:"Sync policy options — automated vs manual", badge:"deep dive", bt:"deep",
+      body:`<div class="cmp">
+  <div class="crow col3 head">
+    <div class="ccell">Policy</div>
+    <div class="ccell">When to use</div>
+    <div class="ccell">Risk</div>
+  </div>
+  <div class="crow col3">
+    <div class="ccell hl">automated + selfHeal</div>
+    <div class="ccell">Staging — deploy everything automatically</div>
+    <div class="ccell">Breaking change auto-deploys</div>
+  </div>
+  <div class="crow col3">
+    <div class="ccell hl">automated, no selfHeal</div>
+    <div class="ccell">Prod — auto-deploy but allow manual fixes</div>
+    <div class="ccell">Drift possible from manual fixes</div>
+  </div>
+  <div class="crow col3">
+    <div class="ccell hl">manual</div>
+    <div class="ccell">Sensitive prod — require human approval</div>
+    <div class="ccell">Deploys block on human availability</div>
+  </div>
+</div>
+<div class="callout info"><span class="cico">ℹ</span><div>For your project: use <strong>automated + selfHeal</strong> for staging, <strong>automated without selfHeal</strong> for prod. This gives you fast staging deploys with a safety valve in prod.</div></div>`
+    },
+    {
+      dot:"argo", label:"Rollback — three ways", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal — rollback options</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Option 1: Git revert (recommended — keeps audit trail)</span>
+cd gitops-config
+git revert HEAD                    <span class="cm"># reverts last commit (the bad deploy)</span>
+git push origin main
+<span class="cm"># ArgoCD detects revert → re-deploys previous image tag automatically</span>
+
+<span class="cm"># Option 2: ArgoCD rollback via CLI</span>
+argocd app history app-prod        <span class="cm"># shows all revisions</span>
+<span class="cm"># ID  DATE                           REVISION
+# 5   2024-01-15 14:32:10 +0000      HEAD (a3f9c12)
+# 4   2024-01-15 10:15:22 +0000      HEAD (b4d8e21)  ← good version</span>
+
+argocd app rollback app-prod 4     <span class="cm"># roll back to revision 4</span>
+
+<span class="cm"># Option 3: ArgoCD UI</span>
+<span class="cm"># Open UI → app-prod → History and Rollback → click rollback on any revision</span>
+</pre></div>`,
+      why:"<strong>Always prefer Option 1 (git revert).</strong> A CLI or UI rollback bypasses Git — the cluster is no longer in sync with the config repo. The next ArgoCD sync will re-apply the bad version. Git revert creates a new commit that IS the correct state, so ArgoCD and Git stay in agreement."
+    },
+    {
+      dot:"argo", label:"Useful ArgoCD CLI commands for daily operations", badge:"concept", bt:"concept",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">argocd cheatsheet</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># List all applications and their sync/health status</span>
+argocd app list
+
+<span class="cm"># Get detailed status of one app</span>
+argocd app get app-staging
+
+<span class="cm"># Force sync immediately (don't wait for poll interval)</span>
+argocd app sync app-staging
+
+<span class="cm"># Sync with pruning (delete resources removed from git)</span>
+argocd app sync app-staging --prune
+
+<span class="cm"># View rendered manifests ArgoCD would apply</span>
+argocd app manifests app-staging
+
+<span class="cm"># View diff between live cluster and git</span>
+argocd app diff app-staging
+
+<span class="cm"># View deploy history</span>
+argocd app history app-prod
+
+<span class="cm"># Manually trigger rollback to previous revision</span>
+argocd app rollback app-prod &lt;revision-id&gt;
+
+<span class="cm"># Pause auto-sync (for maintenance windows)</span>
+argocd app set app-prod --sync-policy none
+
+<span class="cm"># Re-enable auto-sync</span>
+argocd app set app-prod --sync-policy automated
+</pre></div>`
+    }
+  ]
+},
+
+// ── 8 ─────────────────────────────────────────────────────
+{
+  title:"Prod promotion workflow", sub:"promotion gate",
+  eyebrow:"Step 8", headline:"Staging → Prod promotion",
+  desc:"Staging gets every push automatically. Production gets a deliberate promotion — either manual or automated after a health check. This is the gate pattern that prevents every staging deploy from going straight to prod.",
+  tags:["gitops","ci","bash"],
+  tag:"git",
+  chunks:[
+    {
+      dot:"concept", label:"The promotion model — two levels of automation", badge:"concept", bt:"concept",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">promotion flow</span></div><pre>
+git push main
+      │
+      ▼
+CI builds image → pushes to ECR → updates staging tag
+      │
+      ▼
+ArgoCD deploys to staging automatically
+      │
+      ▼ (wait for staging to be Healthy)
+      │
+  ┌───┴──────────────────────────────────────────┐
+  │                                              │
+  ▼  (option A: manual)          ▼  (option B: automated)
+  Engineer reviews staging       CI polls ArgoCD API
+  then runs promote script       waits for app-staging Healthy
+                                 then promotes automatically
+  │                              │
+  └──────────────┬───────────────┘
+                 ▼
+         CI updates prod/values.yaml
+         image.tag: a3f9c12
+                 │
+                 ▼
+         ArgoCD deploys to prod
+</pre></div>`
+    },
+    {
+      dot:"ci", label:"Manual promotion script", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">scripts/promote-to-prod.sh</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+#!/bin/bash
+set -euo pipefail
+
+IMAGE_TAG=\${1:?"Usage: $0 &lt;image-tag&gt;"}
+
+echo "Promoting $IMAGE_TAG to production..."
+
+cd gitops-config
+
+<span class="cm"># Verify this tag exists in staging first</span>
+STAGING_TAG=$(grep 'tag:' environments/staging/values.yaml | awk '{print $2}')
+if [ "$STAGING_TAG" != "$IMAGE_TAG" ]; then
+  echo "Error: $IMAGE_TAG is not the current staging tag ($STAGING_TAG)"
+  exit 1
+fi
+
+<span class="cm"># Update prod values</span>
+sed -i "s|tag:.*|tag: $IMAGE_TAG|" environments/prod/values.yaml
+
+git config user.name  "Release Engineer"
+git config user.email "release@devops-platform.com"
+git add environments/prod/values.yaml
+git commit -m "deploy(prod): $IMAGE_TAG"
+git push
+
+echo "Promoted $IMAGE_TAG to prod. ArgoCD will sync within 3 minutes."
+</pre></div>
+<div class="cw"><div class="cbar"><span class="cfile">usage</span></div><pre>
+<span class="cm"># Promote whatever is currently in staging to prod</span>
+STAGING_TAG=$(grep 'tag:' gitops-config/environments/staging/values.yaml | awk '{print $2}')
+./scripts/promote-to-prod.sh $STAGING_TAG
+</pre></div>`
+    }
+  ]
+},
+
+// ── 9 ─────────────────────────────────────────────────────
+{
+  title:"Verify the full GitOps flow", sub:"verification",
+  eyebrow:"Step 9", headline:"End-to-end verification",
+  desc:"Test the complete flow from git push to production — and verify drift detection works.",
+  tags:["argo","bash"],
+  tag:"argo",
+  chunks:[
+    {
+      dot:"bash", label:"Test the full automated flow", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># 1. Make a code change and push</span>
+echo "// test change $(date)" >> app/index.js
+git add app/index.js
+git commit -m "test: trigger CI pipeline"
+git push origin main
+
+<span class="cm"># 2. Watch CI in GitHub Actions tab</span>
+gh run watch
+
+<span class="cm"># 3. After CI completes, watch ArgoCD sync staging</span>
+argocd app get app-staging --watch
+
+<span class="cm"># 4. Verify new pod is running with new image</span>
+kubectl get pods -n staging -o jsonpath='{.items[*].spec.containers[*].image}'
+
+<span class="cm"># 5. Test the endpoint</span>
+curl http://&lt;ingress-ip&gt;/health -H "Host: staging.devops-platform.com"
+</pre></div>`
+    },
+    {
+      dot:"argo", label:"Test drift detection (selfHeal in action)", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal — test that ArgoCD reverts manual changes</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Manually scale staging deployment (simulating an engineer's mistake)</span>
+kubectl scale deployment -n staging --replicas=5 \
+  -l app.kubernetes.io/name=app
+
+<span class="cm"># Check immediately — it shows 5 replicas</span>
+kubectl get deployment -n staging
+
+<span class="cm"># Wait up to 3 minutes (ArgoCD poll interval)</span>
+<span class="cm"># ArgoCD detects drift — values.yaml says replicaCount: 1</span>
+<span class="cm"># ArgoCD reverts the Deployment back to 1 replica</span>
+
+<span class="cm"># Check again — back to 1 replica</span>
+kubectl get deployment -n staging
+
+<span class="cm"># ArgoCD UI shows: "OutOfSync detected → auto-synced"</span>
+</pre></div>`,
+      why:"This test proves your GitOps setup works correctly. <strong>If ArgoCD reverts the manual change, your cluster is truly declarative.</strong> This is the feature that makes on-call less stressful — you can't accidentally leave the cluster in an unknown state."
+    },
+    {
+      dot:"check", label:"Phase 4 verification checklist", badge:"verify", bt:"run",
+      body:`<div class="chklist">
+<div class="chk"><span class="ci">✓</span>ArgoCD UI accessible and shows all apps as Synced + Healthy</div>
+<div class="chk"><span class="ci">✓</span>git push to app repo triggers CI which updates staging/values.yaml</div>
+<div class="chk"><span class="ci">✓</span>ArgoCD detects config repo change and syncs staging within 3 min</div>
+<div class="chk"><span class="ci">✓</span>New image tag visible in running pods after sync</div>
+<div class="chk"><span class="ci">✓</span>Manual kubectl scale change is reverted by ArgoCD (selfHeal)</div>
+<div class="chk"><span class="ci">✓</span>App of Apps deploys both staging and prod from one root Application</div>
+<div class="chk"><span class="ci">✓</span>git revert in config repo triggers automatic rollback in cluster</div>
+<div class="chk"><span class="ci">✓</span>argocd app diff shows no diff when cluster matches Git</div>
+<div class="chk"><span class="ci">✓</span>Promote script updates prod values and ArgoCD deploys to prod</div>
+</div>`
+    }
+  ]
+},
+
+// ── 10 ────────────────────────────────────────────────────
+{
+  title:"Phase 4 complete", sub:"summary & cv lines",
+  eyebrow:"Phase 4 · Done", headline:"What you built",
+  desc:"Phase 4 is complete. You now have a fully automated GitOps delivery pipeline. No human runs kubectl or helm against the cluster anymore — Git is the control plane. Phase 5 is observability.",
+  tags:["concept"],
+  tag:"argo",
+  chunks:[
+    {
+      dot:"check", label:"CV bullet points from Phase 4", badge:"cv lines", bt:"cv",
+      body:`<div class="chklist">
+<div class="chk"><span class="ca">→</span>Implemented GitOps delivery with ArgoCD — decoupled CI (GitHub Actions) from CD (ArgoCD), eliminating cluster credentials from CI pipelines</div>
+<div class="chk"><span class="ca">→</span>Designed two-repo GitOps pattern separating application code from cluster config, providing full deploy audit trail via Git history</div>
+<div class="chk"><span class="ca">→</span>Configured ArgoCD self-healing and automated sync — cluster drift detected and reverted automatically, maintaining declarative state</div>
+<div class="chk"><span class="ca">→</span>Implemented App of Apps pattern managing multiple environments (staging, prod) from a single root ArgoCD Application</div>
+<div class="chk"><span class="ca">→</span>Built staging → prod promotion gate with health verification before production deployment</div>
+</div>`
+    },
+    {
+      dot:"concept", label:"What Phase 5 adds — Observability", badge:"next", bt:"concept",
+      body:`<div class="prose">Phase 5 installs the observability stack: <strong>Prometheus</strong> scrapes metrics from every pod and node. <strong>Grafana</strong> visualises them as dashboards. <strong>Loki</strong> aggregates logs from all containers into one searchable stream. <strong>Alertmanager</strong> sends Slack or email notifications when things break.<br><br>After Phase 5 you can answer the question <em>"what happened in prod between 14:00 and 14:05 on Tuesday?"</em> with graphs, logs, and a timeline — which is what on-call engineers actually need.<br><br>Tell me <strong>"next phase"</strong> when you're ready.</div>`
+    }
+  ]
+}
+
+];
+
+let cur = 0;
+const done = new Set();
+
+function renderNav() {
+  document.getElementById('nav-scroll').innerHTML = STEPS.map((s,i) => `
+    <div class="nav-item ${i===cur?'active':''} ${done.has(i)?'done':''}" onclick="jump(${i})">
+      <div class="nn">${done.has(i)?'✓':i+1}</div>
+      <div class="nt">
+        <div class="ntitle">${s.title}</div>
+        <div class="nsub">${s.sub}</div>
+      </div>
+      <div class="ntag ${s.tag}">${s.tag}</div>
+    </div>
+  `).join('');
+  const pct = Math.round(done.size/STEPS.length*100);
+  document.getElementById('prog-fill').style.width = pct+'%';
+  document.getElementById('prog-txt').textContent = `${done.size} / ${STEPS.length}`;
+}
+
+function renderMain() {
+  const s = STEPS[cur];
+  document.getElementById('main-head').innerHTML = `
+    <div class="eyebrow">${s.eyebrow}</div>
+    <div class="headline">${s.headline}</div>
+    <div class="step-desc">${s.desc}</div>
+    <div class="tag-row">${s.tags.map(t=>`<span class="tag ${t}">${t}</span>`).join('')}</div>
+  `;
+  document.getElementById('content').innerHTML = s.chunks.map((c,ci) => `
+    <div class="chunk ${ci===0?'open':''}" id="c${ci}">
+      <div class="chunk-head" onclick="tog(${ci})">
+        <div class="cdot ${c.dot}"></div>
+        <span class="clabel">${c.label}</span>
+        <span class="cbadge ${c.bt}">${c.badge}</span>
+        <span class="cchev">▼</span>
+      </div>
+      <div class="chunk-body">
+        ${c.body}
+        ${c.why?`<div class="why"><div class="why-lbl">why this matters</div><p>${c.why}</p></div>`:''}
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('step-lbl').textContent = `step ${cur+1} of ${STEPS.length}`;
+  document.getElementById('btn-prev').disabled = cur===0;
+  document.getElementById('btn-next').textContent = cur===STEPS.length-1?'✓ done':'next →';
+}
+
+function tog(ci) { document.getElementById(`c${ci}`).classList.toggle('open'); }
+
+function go(dir) {
+  if(dir===1&&cur<STEPS.length-1){done.add(cur);cur++;}
+  else if(dir===-1&&cur>0)cur--;
+  renderNav(); renderMain();
+  document.querySelector('.main').scrollTop=0;
+}
+
+function jump(i) {
+  if(i<cur)done.delete(i);
+  cur=i; renderNav(); renderMain();
+}
+
+function cp(btn) {
+  const pre = btn.closest('.cw').querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText).then(()=>{
+    btn.textContent='copied!'; btn.classList.add('ok');
+    setTimeout(()=>{btn.textContent='copy';btn.classList.remove('ok');},2000);
+  });
+}
+
+renderNav(); renderMain();
+</script>
+</body>
+</html>

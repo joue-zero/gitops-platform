@@ -1,2 +1,26 @@
 ---
-# tasks file for ansible/roles/common
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: yes
+    cache_valid_time: 3600
+
+- name: Install minimal admin tools
+  ansible.builtin.apt:
+    name:
+      - curl
+      - htop
+      - ca-certificates
+      - gnupg
+    state: present
+
+- name: Harden SSH config
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    backup: yes
+  loop:
+    - { regexp: '^PermitRootLogin',        line: 'PermitRootLogin no' }
+    - { regexp: '^PasswordAuthentication', line: 'PasswordAuthentication no' }
+    - { regexp: '^X11Forwarding',          line: 'X11Forwarding no' }
+  notify: restart sshd

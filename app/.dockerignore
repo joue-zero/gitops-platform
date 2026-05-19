@@ -1,0 +1,15 @@
+node_modules
+.git
+.github
+*.md
+.env
+.env.*
+coverage/
+.nyc_output/
+tests/
+__tests__/
+*.test.js
+*.spec.js
+.DS_Store
+Dockerfile
+docker-compose*.yml

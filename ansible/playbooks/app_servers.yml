@@ -1,0 +1,9 @@
+---
+- name: Configure app servers
+  hosts: app_server
+  become: true
+
+  roles:
+    - ../roles/common
+    - ../roles/docker
+    - ../roles/nginx

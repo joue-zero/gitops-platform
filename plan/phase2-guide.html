@@ -1,0 +1,1269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phase 2 — Containers & CI/CD</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600&family=Syne:wght@700;800&display=swap');
+
+:root {
+  --bg: #080B0F;
+  --surface: #0C1018;
+  --surface2: #111620;
+  --border: #1C2433;
+  --border2: #243040;
+  --text: #CDD5E0;
+  --muted: #4A5568;
+  --dim: #2D3748;
+  --accent: #FF9500;
+  --accent2: #FF6B00;
+  --blue: #3B82F6;
+  --green: #22C55E;
+  --red: #EF4444;
+  --purple: #A855F7;
+  --cyan: #06B6D4;
+  --yellow: #EAB308;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'JetBrains Mono', monospace;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── LAYOUT ── */
+.shell {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  min-height: 100vh;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.sidebar-header {
+  padding: 28px 20px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.phase-label {
+  font-size: 9px;
+  letter-spacing: 0.25em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.phase-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.15;
+  color: #fff;
+}
+
+.phase-meta {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.meta-pill {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  padding: 3px 8px;
+  border-radius: 2px;
+  text-transform: uppercase;
+}
+
+.meta-pill.week  { background: #1A2535; color: var(--blue); }
+.meta-pill.tools { background: #1A1F10; color: var(--green); }
+
+.progress-wrap {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+}
+
+.progress-label {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.progress-track {
+  height: 2px;
+  background: var(--border);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 1px;
+  transition: width 0.4s ease;
+}
+
+.step-nav {
+  flex: 1;
+  padding: 12px 0;
+}
+
+.step-nav-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 20px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border-left: 2px solid transparent;
+}
+
+.step-nav-item:hover { background: var(--surface2); }
+.step-nav-item.active {
+  background: var(--surface2);
+  border-left-color: var(--accent);
+}
+
+.step-nav-item.done .nav-num { background: var(--green); color: #000; }
+
+.nav-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 2px;
+  background: var(--dim);
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.step-nav-item.active .nav-num {
+  background: var(--accent);
+  color: #000;
+}
+
+.nav-text { flex: 1; }
+.nav-title {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.step-nav-item.active .nav-title { color: #fff; }
+
+.nav-sub {
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: 2px;
+  letter-spacing: 0.04em;
+}
+
+/* ── MAIN ── */
+.main {
+  display: flex;
+  flex-direction: column;
+}
+
+.main-header {
+  padding: 32px 40px 24px;
+  border-bottom: 1px solid var(--border);
+  background: linear-gradient(135deg, #0C1018 0%, #080B0F 100%);
+}
+
+.step-eyebrow {
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.step-headline {
+  font-family: 'Syne', sans-serif;
+  font-size: 32px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.1;
+  margin-bottom: 10px;
+}
+
+.step-desc {
+  font-size: 12px;
+  color: #7A8FA6;
+  line-height: 1.8;
+  max-width: 680px;
+}
+
+.step-tags {
+  display: flex;
+  gap: 6px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.step-tag {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  padding: 3px 8px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  border: 1px solid;
+}
+
+.step-tag.docker  { color: var(--blue);   border-color: #1E3A5F; background: #0A1E35; }
+.step-tag.github  { color: var(--purple); border-color: #3B1F5F; background: #1A0A35; }
+.step-tag.aws     { color: var(--accent); border-color: #5F3A00; background: #2A1800; }
+.step-tag.bash    { color: var(--green);  border-color: #0F3A1F; background: #051A0D; }
+.step-tag.warn    { color: var(--yellow); border-color: #5F4A00; background: #2A2000; }
+.step-tag.concept { color: var(--cyan);   border-color: #0F3A4A; background: #051A25; }
+
+/* ── CONTENT ── */
+.content {
+  flex: 1;
+  padding: 32px 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── CHUNK ── */
+.chunk {
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.chunk-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  cursor: pointer;
+  background: var(--surface);
+  transition: background 0.15s;
+  user-select: none;
+}
+
+.chunk-head:hover { background: var(--surface2); }
+.chunk.open .chunk-head { border-bottom: 1px solid var(--border); }
+
+.chunk-icon {
+  font-size: 15px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.chunk-icon.docker  { background: #0A1E35; color: var(--blue); }
+.chunk-icon.bash    { background: #051A0D; color: var(--green); }
+.chunk-icon.aws     { background: #2A1800; color: var(--accent); }
+.chunk-icon.github  { background: #1A0A35; color: var(--purple); }
+.chunk-icon.concept { background: #051A25; color: var(--cyan); }
+.chunk-icon.warn    { background: #2A2000; color: var(--yellow); }
+.chunk-icon.check   { background: #0A2010; color: var(--green); }
+
+.chunk-label {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.chunk-badge {
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 2px;
+}
+
+.chunk-badge.do   { background: #0A1E35; color: var(--blue); }
+.chunk-badge.run  { background: #051A0D; color: var(--green); }
+.chunk-badge.crit { background: #2A1000; color: var(--red); }
+.chunk-badge.why  { background: #051A25; color: var(--cyan); }
+.chunk-badge.warn { background: #2A2000; color: var(--yellow); }
+
+.chunk-chevron {
+  font-size: 11px;
+  color: var(--muted);
+  transition: transform 0.2s;
+}
+
+.chunk.open .chunk-chevron { transform: rotate(180deg); }
+
+.chunk-body {
+  display: none;
+  padding: 20px 20px;
+  background: var(--bg);
+  flex-direction: column;
+  gap: 14px;
+}
+
+.chunk.open .chunk-body { display: flex; }
+
+/* ── PROSE ── */
+.prose {
+  font-size: 12px;
+  color: #7A8FA6;
+  line-height: 1.85;
+}
+
+.prose strong { color: var(--text); font-weight: 500; }
+.prose code {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  padding: 1px 5px;
+  border-radius: 2px;
+  font-size: 11px;
+  color: var(--cyan);
+}
+
+/* ── CODE BLOCK ── */
+.code-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.code-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 14px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+}
+
+.code-filename {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+}
+
+.copy-btn {
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border: 1px solid var(--border2);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.copy-btn:hover { color: var(--text); border-color: var(--muted); }
+.copy-btn.copied { color: var(--green); border-color: var(--green); }
+
+pre {
+  padding: 16px;
+  overflow-x: auto;
+  font-size: 11.5px;
+  line-height: 1.75;
+  color: var(--text);
+}
+
+/* syntax */
+.cm  { color: #4A5568; font-style: italic; }
+.ck  { color: #60A5FA; }
+.cv  { color: #34D399; }
+.cs  { color: #FCD34D; }
+.cf  { color: #F87171; }
+.cp  { color: #C084FC; }
+
+/* ── WHY BOX ── */
+.why {
+  border-left: 2px solid var(--accent2);
+  padding: 12px 16px;
+  background: #130D04;
+  border-radius: 0 3px 3px 0;
+}
+
+.why-label {
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  color: var(--accent);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.why p {
+  font-size: 12px;
+  color: #8A7A5A;
+  line-height: 1.8;
+}
+
+.why p strong { color: #C0A060; font-weight: 500; }
+
+/* ── CALLOUT ── */
+.callout {
+  border-radius: 3px;
+  padding: 12px 16px;
+  font-size: 12px;
+  line-height: 1.75;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.callout.info    { background: #051525; border: 1px solid #0E2A4A; color: #60A5FA; }
+.callout.warn    { background: #1A1200; border: 1px solid #3A2800; color: #D4A017; }
+.callout.danger  { background: #1A0800; border: 1px solid #3A1400; color: #F87171; }
+.callout.success { background: #051505; border: 1px solid #0A2A10; color: #4ADE80; }
+.callout-icon    { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+/* ── CHECKLIST ── */
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.check-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12px;
+  color: #7A8FA6;
+  line-height: 1.5;
+  padding: 6px 10px;
+  border-radius: 3px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.check-item .ci { color: var(--green); flex-shrink: 0; margin-top: 1px; }
+
+/* ── FILE TREE ── */
+.ftree {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 14px 16px;
+  font-size: 11.5px;
+  line-height: 2;
+  color: var(--muted);
+}
+
+.ftree .dir { color: #fff; font-weight: 500; }
+.ftree .tf  { color: var(--blue); }
+.ftree .yml { color: var(--green); }
+.ftree .sh  { color: var(--yellow); }
+.ftree .new { color: var(--dim); font-style: italic; font-size: 10px; }
+
+/* ── NAV BUTTONS ── */
+.bottom-nav {
+  padding: 20px 40px 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.nav-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  padding: 10px 20px;
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.nav-btn:hover { background: var(--surface2); border-color: var(--muted); }
+.nav-btn:disabled { opacity: 0.25; cursor: default; }
+.nav-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #000;
+  font-weight: 600;
+}
+.nav-btn.primary:hover { background: var(--accent2); border-color: var(--accent2); }
+
+.step-counter-label {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+}
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="phase-label">Phase 2</div>
+      <div class="phase-title">Containers &amp; CI/CD</div>
+      <div class="phase-meta">
+        <span class="meta-pill week">Week 3</span>
+        <span class="meta-pill tools">Docker · ECR · GitHub Actions</span>
+      </div>
+    </div>
+
+    <div class="progress-wrap">
+      <div class="progress-label">
+        <span>Progress</span>
+        <span id="prog-txt">0 / 7</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" id="prog-fill" style="width:0%"></div>
+      </div>
+    </div>
+
+    <nav class="step-nav" id="step-nav"></nav>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="main-header" id="main-header"></div>
+    <div class="content" id="content"></div>
+    <div class="bottom-nav">
+      <button class="nav-btn" id="btn-prev" onclick="go(-1)">← prev</button>
+      <span class="step-counter-label" id="step-counter"></span>
+      <button class="nav-btn primary" id="btn-next" onclick="go(1)">next →</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const STEPS = [
+  // ─────────────────────────────────────────────────────────
+  {
+    title: "What Phase 2 builds",
+    sub: "overview",
+    eyebrow: "Phase 2 · Overview",
+    headline: "Containers &amp; CI/CD",
+    desc: "Phase 1 gave you the infrastructure. Phase 2 puts something on it. You will write a Dockerfile for your app, push images to AWS ECR, and have GitHub Actions build and push automatically on every git push — with zero AWS keys stored in GitHub.",
+    tags: ["concept","docker","aws","github"],
+    chunks: [
+      {
+        icon: "concept", label: "What you will have at the end of Phase 2", badge: "overview", badgeType: "why",
+        body: `<div class="ftree">
+gitops-platform/
+├── <span class="dir">app/</span>                     <span class="new"># a simple Node/Laravel app (the vehicle)</span>
+│   ├── <span class="sh">Dockerfile</span>           <span class="new"># multi-stage production build</span>
+│   ├── <span class="sh">.dockerignore</span>
+│   └── <span class="tf">docker-compose.yml</span>   <span class="new"># local dev environment</span>
+├── <span class="dir">.github/</span>
+│   └── <span class="dir">workflows/</span>
+│       └── <span class="yml">ci.yml</span>               <span class="new"># build → test → push to ECR</span>
+└── terraform/
+    └── modules/
+        └── <span class="dir">data/</span>
+            └── <span class="tf">main.tf</span>          <span class="new"># ECR repository resource added here</span>
+</div>`,
+        why: "The app is just a vehicle. What interviewers care about is the pipeline around it — multi-stage builds, ECR auth via OIDC, layer caching, image tagging strategy. The app could be a single HTML file. The pipeline is the deliverable."
+      },
+      {
+        icon: "concept", label: "The flow: what happens on every git push", badge: "concept", badgeType: "why",
+        body: `<div class="code-wrap"><div class="code-bar"><span class="code-filename">flow</span></div><pre>
+git push origin main
+       │
+       ▼
+GitHub Actions triggers
+       │
+       ├─ 1. Checkout code
+       ├─ 2. Run tests
+       ├─ 3. Authenticate to AWS via OIDC (no keys)
+       ├─ 4. Login to ECR
+       ├─ 5. Build Docker image (multi-stage)
+       │      └── tag with git SHA: app:a3f9c12
+       ├─ 6. Push to ECR
+       └─ 7. (later) trigger Ansible or ArgoCD to deploy
+</pre></div>`
+      }
+    ]
+  },
+
+  // ─────────────────────────────────────────────────────────
+  {
+    title: "The app — what to containerise",
+    sub: "app setup",
+    eyebrow: "Step 1",
+    headline: "Pick &amp; scaffold the app",
+    desc: "You need a minimal app to containerise. Use your existing Laravel skills — a simple API with one /health endpoint is enough. The goal is something that listens on port 8080 and responds. Everything else is pipeline.",
+    tags: ["bash","concept"],
+    chunks: [
+      {
+        icon: "bash", label: "Option A — minimal Node.js app (fastest to set up)", badge: "run this", badgeType: "run",
+        body: `<div class="code-wrap"><div class="code-bar"><span class="code-filename">terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div><pre>
+mkdir -p app && cd app
+npm init -y
+npm install express
+
+cat > index.js << 'EOF'
+const express = require('express');
+const app = express();
+const PORT = process.env.PORT || 8080;
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+app.get('/', (req, res) => {
+  res.json({ message: 'gitops-platform app', version: process.env.APP_VERSION || 'dev' });
+});
+
+app.listen(PORT, () => console.log(\`Listening on \${PORT}\`));
+EOF</pre></div>`,
+        why: "Node is faster to set up for this purpose. If you prefer Laravel, the Dockerfile changes slightly (PHP-FPM + Nginx) but the pipeline is identical. Use what you know — the container is what matters, not the framework."
+      },
+      {
+        icon: "bash", label: "Option B — if you use your existing Laravel app", badge: "concept", badgeType: "why",
+        body: `<div class="callout info"><span class="callout-icon">ℹ</span><div>Copy your Laravel project into <code>app/</code>. Make sure it has a <code>/health</code> route that returns 200. The Dockerfile in the next step handles PHP-FPM. The pipeline steps are identical — only the base image changes.</div></div>
+<div class="code-wrap"><div class="code-bar"><span class="code-filename">routes/api.php — add this route</span></div><pre>
+Route::get('/health', fn() => response()->json(['status' => 'ok']));
+</pre></div>`
+      }
+    ]
+  },
+
+  // ─────────────────────────────────────────────────────────
+  {
+    title: "Dockerfile — multi-stage build",
+    sub: "containerisation",
+    eyebrow: "Step 2",
+    headline: "Write the Dockerfile",
+    desc: "Multi-stage builds are non-negotiable for production. The build stage installs everything including dev dependencies. The production stage copies only the compiled output — no node_modules with 50k files, no source maps, no dev tooling. The final image is lean and has a tiny attack surface.",
+    tags: ["docker","concept"],
+    chunks: [
+      {
+        icon: "concept", label: "Why multi-stage matters — the mental model", badge: "concept", badgeType: "why",
+        body: `<div class="prose">A single-stage Dockerfile copies everything: your source, your <code>devDependencies</code>, your build tools, your test runners. That image might be 900MB. <br><br> Multi-stage: Stage 1 (builder) does all the heavy lifting. Stage 2 (production) starts from scratch and copies only the compiled output. The final image is 150MB and contains nothing the attacker can use.</div>
+<div class="code-wrap"><div class="code-bar"><span class="code-filename">mental model</span></div><pre>
+Stage 1: builder
+  FROM node:20        ← full image with build tools
+  COPY . .
+  RUN npm ci          ← install everything including devDeps
+  RUN npm run build   ← compile, bundle, etc
+
+Stage 2: production
+  FROM node:20-alpine ← tiny base (5MB vs 300MB)
+  COPY --from=builder /app/dist ./dist       ← only the output
+  COPY --from=builder /app/node_modules ...  ← only prod deps
+  CMD ["node", "dist/index.js"]
+</pre></div>`
+      },
+      {
+        icon: "docker", label: "Dockerfile for Node.js app", badge: "write this", badgeType: "do",
+        body: `<div class="code-wrap"><div class="code-bar"><span class="code-filename">app/Dockerfile</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div><pre>
+<span class="cm"># ── Stage 1: builder ──────────────────────────────────</span>
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+<span class="cm"># Copy dependency manifests first (layer cache optimisation)</span>
+<span class="cm"># If package.json doesn't change, Docker reuses this layer</span>
+COPY package*.json ./
+RUN npm ci --only=production
+
+<span class="cm"># Now copy source</span>
+COPY . .
+
+<span class="cm"># ── Stage 2: production ───────────────────────────────</span>
+FROM node:20-alpine AS production
+
+<span class="cm"># Security: don't run as root</span>
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+WORKDIR /app
+
+<span class="cm"># Copy only what production needs from builder</span>
+COPY --from=builder --chown=appuser:appgroup /app/node_modules ./node_modules
+COPY --from=builder --chown=appuser:appgroup /app/index.js .
+COPY --from=builder --chown=appuser:appgroup /app/package.json .
+
+USER appuser
+
+ENV NODE_ENV=production
+ENV PORT=8080
+EXPOSE 8080
+
+<span class="cm"># Healthcheck — Docker and ECS use this to know if container is healthy</span>
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- http://localhost:8080/health || exit 1
+
+CMD ["node", "index.js"]
+</pre></div>`,
+        why: "<strong>Layer order is load-bearing.</strong> COPY package.json before COPY . . because package.json changes rarely, source code changes constantly. Docker builds layers like a cache — unchanged layers are skipped. If you flip the order, every npm ci re-runs even when you only changed one line of code."
+      },
+      {
+        icon: "bash", label: ".dockerignore — what to never send to the build context", badge: "write this", badgeType: "do",
+        body: `<div class="code-wrap"><div class="code-bar"><span class="code-filename">app/.dockerignore</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div><pre>
+node_modules
+.git
+.github
+*.md
+.env
+.env.*
+coverage/
+.nyc_output/
+tests/
+__tests__/
+*.test.js
+*.spec.js
+.DS_Store
+Dockerfile
+docker-compose*.yml
+</pre></div>`,
+        why: "The build context is everything Docker sends to the daemon before building. Without .dockerignore, node_modules (often 200MB+) gets sent over the socket on every build — even though the Dockerfile never uses it. This alone can make builds 10x slower."
+      },
+      {
+        icon: "bash", label: "docker-compose.yml — local development parity", badge: "write this", badgeType: "do",
+        body: `<div class="code-wrap"><div class="code-bar"><span class="code-filename">app/docker-compose.yml</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div><pre>
+services:
+  app:
+    build:
+      context: .
+      target: production    <span class="cm"># build the production stage locally too</span>
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=production
+      - APP_VERSION=local
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+</pre></div>`,
+        why: "The <code>target: production</code> key is important — it means local docker-compose builds the exact same stage that CI builds. No surprises when you deploy."
+      },
+      {
+        icon: "bash", label: "Build and test locally before pushing to CI", badge: "run this", badgeType: "run",
+        body: `<div class="code-wrap"><div class="code-bar"><span class="code-filename">terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div><pre>
+cd app
+
+<span class="cm"># Build the image locally</span>
+docker build -t gitops-platform:local .
+
+<span class="cm"># Check the image size (should be under 200MB for Alpine-based)</span>
+docker images gitops-platform:local
+
+<span class="cm"># Run it</span>
+docker run -p 8080:8080 gitops-platform:local
+
+<span class="cm"># In another terminal — test the endpoints</span>
+curl http://localhost:8080/health
+curl http://localhost:8080/
+
+<span class="cm"># Inspect layers (see what's actually in the image)</span>
+docker history gitops-platform:local
+</pre></div>`
+      }
+    ]
+  },
+
+  // ─────────────────────────────────────────────────────────
+  {
+    title: "ECR repository with Terraform",
+    sub: "registry setup",
+    eyebrow: "Step 3",
+    headline: "Provision ECR via Terraform",
+    desc: "ECR is your private Docker registry on AWS. Your CI pipeline pushes to it, your EC2/EKS instances pull from it. You add it to modules/data/ — it's a data-layer concern, not compute.",
+    tags: ["aws","docker"],
+    chunks: [
+      {
+        icon: "aws", label: "modules/data/main.tf — add ECR resource", badge: "write this", badgeType: "do",
+        body: `<div class="code-wrap"><div class="code-bar"><span class="code-filename">terraform/modules/data/main.tf</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div><pre>
+resource "<span class="ck">aws_ecr_repository</span>" "<span class="cv">app</span>" {
+  name                 = "<span class="cs">\${var.project_name}/app</span>"
+  image_tag_mutability = "IMMUTABLE"   <span class="cm"># tags cannot be overwritten — good practice</span>
+
+  image_scanning_configuration {
+    scan_on_push = true   <span class="cm"># auto CVE scan on every push (free tier)</span>
+  }
+
+  encryption_configuration {
+    encryption_type = "AES256"
+  }
+
+  tags = { Name = "<span class="cs">\${var.project_name}-ecr</span>" }
+}
+
+<span class="cm"># Lifecycle policy — keep only last 10 untagged images (saves cost)</span>
+resource "<span class="ck">aws_ecr_lifecycle_policy</span>" "<span class="cv">app</span>" {
+  repository = aws_ecr_repository.app.name
+
+  policy = jsonencode({
+    rules = [{
+      rulePriority = 1
+      description  = "Keep last 10 untagged images"
+      selection = {
+        tagStatus   = "untagged"
+        countType   = "imageCountMoreThan"
+        countNumber = 10
+      }
+      action = { type = "expire" }
+    }]
+  })
+}
+</pre></div>`,
+        why: "<strong>IMMUTABLE tags</strong> mean once you push <code>app:a3f9c12</code>, that SHA tag is locked — nobody can overwrite it with a different image. This is the correct pattern for traceability: every deployment can be traced to an exact git commit."
+      },
+      {
+        icon: "aws", label: "modules/data/variables.tf + outputs.tf", badge: "write this", badgeType: "do",
+        body: `<div class="code-wrap"><div class="code-bar"><span class="code-filename">terraform/modules/data/variables.tf</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div><pre>
+variable "project_name" { type = string }
+</pre></div>
+<div class="code-wrap"><div class="code-bar"><span class="code-filename">terraform/modules/data/outputs.tf</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div><pre>
+output "ecr_repository_url" {
+  value = aws_ecr_repository.app.repository_url
+}
+
+output "ecr_repository_name" {
+  value = aws_ecr_repository.app.name
+}
+</pre></div>`
+      },
+      {
+        icon: "aws", label: "Add data module to root main.tf + outputs", badge: "write this", badgeType: "do",
+        body: `<div class="code-wrap"><div class="code-bar"><span class="code-filename">terraform/main.tf — add this block</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div><pre>
+module "<span class="cv">data</span>" {
+  source       = "./modules/data"
+  project_name = var.project_name
+}
+</pre></div>
+<div class="code-wrap"><div class="code-bar"><span class="code-filename">terraform/outputs.tf — add this</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div><pre>
+output "ecr_repository_url" {
+  value = module.data.ecr_repository_url
+}
+</pre></div>
+<div class="code-wrap"><div class="code-bar"><span class="code-filename">terminal — apply</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div><pre>
+cd terraform
+terraform init   <span class="cm"># re-init to pick up new module</span>
+terraform plan -out=tfplan
+terraform apply tfplan
+
+<span class="cm"># Get the ECR URL — you need this for the CI pipeline</span>
+terraform output ecr_repository_url
+<span class="cm"># → 123456789012.dkr.ecr.eu-central-1.amazonaws.com/gitops-platform/app</span>
+</pre></div>`
+      }
+    ]
+  },
+
+  // ─────────────────────────────────────────────────────────
+  {
+    title: "GitHub Actions CI pipeline",
+    sub: "ci/cd",
+    eyebrow: "Step 4",
+    headline: "Write the CI pipeline",
+    desc: "This is the centrepiece of Phase 2. The pipeline authenticates to AWS via OIDC (no stored keys), builds the Docker image with layer caching, tags it with the git SHA, and pushes to ECR. Every piece has a reason.",
+    tags: ["github","aws","docker"],
+    chunks: [
+      {
+        icon: "concept", label: "OIDC authentication — why there are no AWS keys in GitHub Secrets", badge: "concept", badgeType: "why",
+        body: `<div class="prose">The traditional approach: generate an IAM user, create access keys, paste <code>AWS_ACCESS_KEY_ID</code> and <code>AWS_SECRET_ACCESS_KEY</code> into GitHub Secrets. This is wrong for two reasons:<br><br>1. Long-lived keys are a permanent liability — leaked once, exploited forever.<br>2. Rotating them is manual work that people forget.<br><br>OIDC works differently: GitHub generates a signed JWT token for each workflow run. AWS verifies the signature against GitHub's public keys and issues temporary credentials that expire in 15 minutes. <strong>No secret ever stored anywhere.</strong></div>`,
+        why: "This is what separates a junior setup from a senior one. Interviewers ask about this directly: <strong>how does your CI authenticate to AWS?</strong> \"OIDC role assumption, no stored keys\" is the right answer."
+      },
+      {
+        icon: "github", label: "Set the GitHub Actions repo secret — ECR URL only", badge: "do this", badgeType: "do",
+        body: `<div class="prose">You need to add one secret to your GitHub repo — the ECR URL. The AWS credentials come from OIDC automatically.</div>
+<div class="code-wrap"><div class="code-bar"><span class="code-filename">GitHub → Settings → Secrets → Actions → New secret</span></div><pre>
+Name:  ECR_REPOSITORY_URL
+Value: 123456789012.dkr.ecr.eu-central-1.amazonaws.com/gitops-platform/app
+
+<span class="cm"># Also add these as repo variables (not secrets):</span>
+AWS_REGION:        eu-central-1
+AWS_ACCOUNT_ID:    123456789012
+</pre></div>
+<div class="callout warn"><span class="callout-icon">⚠</span><div>Go to your IAM module in Terraform and replace <code>YOUR_GH_USERNAME/gitops-platform</code> with your actual GitHub username and repo name, then run <code>terraform apply</code> again. The OIDC role won't work otherwise.</div></div>`
+      },
+      {
+        icon: "github", label: ".github/workflows/ci.yml — the full pipeline", badge: "write this", badgeType: "do",
+        body: `<div class="code-wrap"><div class="code-bar"><span class="code-filename">.github/workflows/ci.yml</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div><pre>
+name: CI — Build and push to ECR
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  AWS_REGION: \${{ vars.AWS_REGION }}
+  ECR_REPOSITORY: \${{ secrets.ECR_REPOSITORY_URL }}
+
+jobs:
+  build-and-push:
+    name: Build, test, push
+    runs-on: ubuntu-latest
+
+    <span class="cm"># Required for OIDC token generation</span>
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      <span class="cm"># ── Auth ───────────────────────────────────────────</span>
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::\${{ vars.AWS_ACCOUNT_ID }}:role/gitops-platform-github-role
+          aws-region: \${{ env.AWS_REGION }}
+
+      <span class="cm"># ── ECR Login ──────────────────────────────────────</span>
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      <span class="cm"># ── Layer cache setup ──────────────────────────────</span>
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      <span class="cm"># ── Build + Push ───────────────────────────────────</span>
+      - name: Build and push image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./app
+          file: ./app/Dockerfile
+          push: \${{ github.event_name == 'push' }}   <span class="cm"># only push on merge, not PR</span>
+          tags: |
+            \${{ env.ECR_REPOSITORY }}:\${{ github.sha }}
+            \${{ env.ECR_REPOSITORY }}:latest
+          cache-from: type=gha                        <span class="cm"># GitHub Actions layer cache</span>
+          cache-to:   type=gha,mode=max
+
+      <span class="cm"># ── Output the image URI for downstream jobs ───────</span>
+      - name: Output image URI
+        if: github.event_name == 'push'
+        run: |
+          echo "IMAGE=\${{ env.ECR_REPOSITORY }}:\${{ github.sha }}" >> $GITHUB_OUTPUT
+          echo "Pushed: \${{ env.ECR_REPOSITORY }}:\${{ github.sha }}"
+</pre></div>`,
+        why: "<strong>Two tags per push: SHA and latest.</strong> The SHA tag (<code>app:a3f9c12</code>) is immutable and traceable — you always know which commit is running in production. The <code>latest</code> tag is a convenience pointer for pulling the newest build. Never deploy using <code>latest</code> — always deploy the SHA tag."
+      },
+      {
+        icon: "concept", label: "Layer caching — why cache-from type=gha matters", badge: "concept", badgeType: "why",
+        body: `<div class="prose">Without caching, every CI run downloads your base image and re-runs every RUN instruction. A Node app might take 3–4 minutes per build.<br><br>With <code>type=gha</code>, GitHub Actions stores the layer cache in its own cache service. The next run checks if <code>package.json</code> changed — if not, it skips <code>npm ci</code> entirely. Typical build time drops from 3 min to 30 sec.<br><br>This is made possible by the layer ordering you did in the Dockerfile: <code>COPY package.json</code> before <code>COPY . .</code> — the cache key for the npm install layer is the hash of package.json only.</div>`
+      }
+    ]
+  },
+
+  // ─────────────────────────────────────────────────────────
+  {
+    title: "Add tests to the pipeline",
+    sub: "quality gate",
+    eyebrow: "Step 5",
+    headline: "Tests before the build",
+    desc: "A CI pipeline without tests is just a build script. Tests must run before the Docker build — fail fast, before you waste time building and pushing a broken image.",
+    tags: ["github","bash"],
+    chunks: [
+      {
+        icon: "bash", label: "Write a minimal test for the health endpoint", badge: "write this", badgeType: "do",
+        body: `<div class="code-wrap"><div class="code-bar"><span class="code-filename">app/tests/health.test.js</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div><pre>
+<span class="cm">// install jest: npm install --save-dev jest supertest</span>
+const request = require('supertest');
+const app     = require('../index');
+
+describe('Health endpoint', () => {
+  it('returns 200 and status ok', async () => {
+    const res = await request(app).get('/health');
+    expect(res.statusCode).toBe(200);
+    expect(res.body.status).toBe('ok');
+  });
+});
+</pre></div>
+<div class="code-wrap"><div class="code-bar"><span class="code-filename">app/package.json — add test script</span></div><pre>
+{
+  "scripts": {
+    "start": "node index.js",
+    "test":  "jest --forceExit"
+  }
+}
+</pre></div>`
+      },
+      {
+        icon: "github", label: "Add test job to ci.yml — runs before build", badge: "write this", badgeType: "do",
+        body: `<div class="code-wrap"><div class="code-bar"><span class="code-filename">.github/workflows/ci.yml — add test job BEFORE build-and-push</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div><pre>
+jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: app
+
+      - name: Run tests
+        run: npm test
+        working-directory: app
+
+  build-and-push:
+    name: Build, test, push
+    runs-on: ubuntu-latest
+    needs: test           <span class="cm"># ← this job only runs if test passes</span>
+    ...
+</pre></div>`,
+        why: "<strong>The <code>needs: test</code> key is the gate.</strong> If tests fail, the build job never starts — you don't waste CI minutes building and pushing a broken image. This is the correct pipeline shape: test → build → push, each blocking the next."
+      }
+    ]
+  },
+
+  // ─────────────────────────────────────────────────────────
+  {
+    title: "Verify the full pipeline",
+    sub: "verification",
+    eyebrow: "Step 6",
+    headline: "Trigger &amp; verify",
+    desc: "Push to main and watch the pipeline. Know what to look for at each stage and how to debug when something goes wrong.",
+    tags: ["bash","github","aws"],
+    chunks: [
+      {
+        icon: "bash", label: "Trigger the pipeline", badge: "run this", badgeType: "run",
+        body: `<div class="code-wrap"><div class="code-bar"><span class="code-filename">terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div><pre>
+cd gitops-platform
+
+git add .
+git commit -m "feat: add Dockerfile and CI pipeline"
+git push origin main
+
+<span class="cm"># Watch it in GitHub → Actions tab</span>
+<span class="cm"># Or via CLI if you have gh installed:</span>
+gh run watch
+</pre></div>`
+      },
+      {
+        icon: "aws", label: "Verify the image landed in ECR", badge: "run this", badgeType: "run",
+        body: `<div class="code-wrap"><div class="code-bar"><span class="code-filename">terminal</span><button class="copy-btn" onclick="copyCode(this)">copy</button></div><pre>
+<span class="cm"># List images in your ECR repo</span>
+aws ecr list-images \
+  --repository-name gitops-platform/app \
+  --region eu-central-1
+
+<span class="cm"># Describe images (see size, push date, tags)</span>
+aws ecr describe-images \
+  --repository-name gitops-platform/app \
+  --region eu-central-1 \
+  --query 'sort_by(imageDetails,&imagePushedAt)[-1]'
+
+<span class="cm"># Pull it locally and run it to confirm it works</span>
+aws ecr get-login-password --region eu-central-1 | \
+  docker login --username AWS --password-stdin \
+  &lt;your_account_id&gt;.dkr.ecr.eu-central-1.amazonaws.com
+
+docker pull &lt;ecr_url&gt;:latest
+docker run -p 8080:8080 &lt;ecr_url&gt;:latest
+curl http://localhost:8080/health
+</pre></div>`
+      },
+      {
+        icon: "check", label: "Phase 2 verification checklist", badge: "verify", badgeType: "run",
+        body: `<div class="checklist">
+<div class="check-item"><span class="ci">✓</span>GitHub Actions workflow file exists at .github/workflows/ci.yml</div>
+<div class="check-item"><span class="ci">✓</span>Push to main triggers the pipeline automatically</div>
+<div class="check-item"><span class="ci">✓</span>Test job runs and passes before build job starts</div>
+<div class="check-item"><span class="ci">✓</span>OIDC auth succeeds — no AWS keys in GitHub Secrets</div>
+<div class="check-item"><span class="ci">✓</span>Image appears in ECR tagged with the git SHA</div>
+<div class="check-item"><span class="ci">✓</span>Image size is reasonable (under 200MB for Alpine-based)</div>
+<div class="check-item"><span class="ci">✓</span>Pulling and running the ECR image locally returns 200 on /health</div>
+<div class="check-item"><span class="ci">✓</span>Second push is faster than first (layer cache hit visible in logs)</div>
+<div class="check-item"><span class="ci">✓</span>ECR shows scan results (no CRITICAL vulnerabilities)</div>
+<div class="check-item"><span class="ci">✓</span>A broken commit (bad test) fails the pipeline before the build runs</div>
+</div>`
+      },
+      {
+        icon: "warn", label: "Common failures and how to fix them", badge: "debug", badgeType: "warn",
+        body: `<div class="code-wrap"><div class="code-bar"><span class="code-filename">common errors</span></div><pre>
+<span class="cf">Error: Not authorized to perform sts:AssumeRoleWithWebIdentity</span>
+Fix: The OIDC condition in your IAM role doesn't match your repo path.
+     Check: repo:YOUR_GH_USERNAME/gitops-platform:*
+     Make sure you ran terraform apply after fixing it.
+
+<span class="cf">Error: no basic auth credentials</span>
+Fix: ECR login step failed. Check the aws-actions/amazon-ecr-login
+     step ran after configure-aws-credentials.
+
+<span class="cf">Error: image manifest does not exist</span>
+Fix: You're trying to push but the ECR repo doesn't exist yet.
+     Run terraform apply in modules/data first.
+
+<span class="cf">Error: COPY failed — file not found</span>
+Fix: The file path in Dockerfile doesn't match your project structure.
+     Build locally first: docker build -t test . && verify.
+</pre></div>`
+      }
+    ]
+  },
+
+  // ─────────────────────────────────────────────────────────
+  {
+    title: "Phase 2 complete — what you built",
+    sub: "summary",
+    eyebrow: "Phase 2 · Done",
+    headline: "What you now have",
+    desc: "Phase 2 is complete. Your infrastructure is alive and your pipeline is running. Phase 3 is Kubernetes on EKS — taking the image that's now in ECR and deploying it to a real cluster.",
+    tags: ["concept"],
+    chunks: [
+      {
+        icon: "check", label: "CV bullet points from Phase 2", badge: "cv lines", badgeType: "why",
+        body: `<div class="checklist">
+<div class="check-item"><span class="ci">→</span>Built multi-stage Docker images reducing production image size by 60%, with layer caching strategy cutting CI build time from 3 min to under 40 sec</div>
+<div class="check-item"><span class="ci">→</span>Implemented GitHub Actions CI pipeline with OIDC authentication to AWS — no long-lived credentials stored in GitHub Secrets</div>
+<div class="check-item"><span class="ci">→</span>Provisioned AWS ECR with immutable image tags, automated vulnerability scanning on push, and lifecycle policies for cost control</div>
+<div class="check-item"><span class="ci">→</span>Structured CI pipeline with test → build → push gating: broken builds never reach the registry</div>
+</div>`
+      },
+      {
+        icon: "concept", label: "What Phase 3 adds on top of this", badge: "next", badgeType: "do",
+        body: `<div class="prose">Phase 3 takes the image that's now sitting in ECR and deploys it to an EKS cluster. You'll write Helm charts, set up an Ingress controller, configure HPA for auto-scaling, and run your first <code>helm upgrade --install</code>. The image tag from Phase 2 (<code>app:&lt;git-sha&gt;</code>) is exactly what goes into the Helm values file.<br><br>Tell me <strong>"next phase"</strong> when you're ready.</div>`
+      }
+    ]
+  }
+];
+
+// ── STATE ──
+let current = 0;
+const done = new Set();
+
+// ── RENDER ──
+function renderNav() {
+  const nav = document.getElementById('step-nav');
+  nav.innerHTML = STEPS.map((s, i) => `
+    <div class="step-nav-item ${i === current ? 'active' : ''} ${done.has(i) ? 'done' : ''}"
+         onclick="jump(${i})">
+      <div class="nav-num">${done.has(i) ? '✓' : i + 1}</div>
+      <div class="nav-text">
+        <div class="nav-title">${s.title}</div>
+        <div class="nav-sub">${s.sub}</div>
+      </div>
+    </div>
+  `).join('');
+
+  const pct = Math.round((done.size / STEPS.length) * 100);
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-txt').textContent = `${done.size} / ${STEPS.length}`;
+}
+
+function tagHtml(tags) {
+  return tags.map(t => `<span class="step-tag ${t}">${t}</span>`).join('');
+}
+
+function renderMain() {
+  const s = STEPS[current];
+
+  document.getElementById('main-header').innerHTML = `
+    <div class="step-eyebrow">${s.eyebrow}</div>
+    <div class="step-headline">${s.headline}</div>
+    <div class="step-desc">${s.desc}</div>
+    <div class="step-tags">${tagHtml(s.tags)}</div>
+  `;
+
+  document.getElementById('content').innerHTML = s.chunks.map((c, ci) => `
+    <div class="chunk ${ci === 0 ? 'open' : ''}" id="chunk-${ci}">
+      <div class="chunk-head" onclick="toggleChunk(${ci})">
+        <div class="chunk-icon ${c.icon}">${iconFor(c.icon)}</div>
+        <span class="chunk-label">${c.label}</span>
+        <span class="chunk-badge ${c.badgeType}">${c.badge}</span>
+        <span class="chunk-chevron">▼</span>
+      </div>
+      <div class="chunk-body">
+        ${c.body}
+        ${c.why ? `<div class="why"><div class="why-label">why this matters</div><p>${c.why}</p></div>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('step-counter').textContent = `step ${current + 1} of ${STEPS.length}`;
+  document.getElementById('btn-prev').disabled = current === 0;
+  document.getElementById('btn-next').textContent = current === STEPS.length - 1 ? '✓ done' : 'next →';
+}
+
+function iconFor(type) {
+  const m = { docker:'🐳', bash:'$_', aws:'☁', github:'⎇', concept:'◈', warn:'⚠', check:'✓' };
+  return m[type] || '·';
+}
+
+function toggleChunk(ci) {
+  document.getElementById(`chunk-${ci}`).classList.toggle('open');
+}
+
+function go(dir) {
+  if (dir === 1 && current < STEPS.length - 1) {
+    done.add(current);
+    current++;
+  } else if (dir === -1 && current > 0) {
+    current--;
+  }
+  renderNav();
+  renderMain();
+  document.querySelector('.main').scrollTop = 0;
+}
+
+function jump(i) {
+  if (i < current) done.delete(i);
+  current = i;
+  renderNav();
+  renderMain();
+}
+
+function copyCode(btn) {
+  const pre = btn.closest('.code-wrap').querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText).then(() => {
+    btn.textContent = 'copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('copied'); }, 2000);
+  });
+}
+
+renderNav();
+renderMain();
+</script>
+</body>
+</html>

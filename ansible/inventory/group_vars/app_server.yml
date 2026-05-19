@@ -1,0 +1,11 @@
+# ---
+# # Automatically proxy SSH traffic through the first available bastion host
+# ansible_ssh_common_args: '-o ProxyJump="ubuntu@{{ hostvars[groups["bastion"][0]]["ansible_host"] }}"'
+
+
+---
+
+ansible_ssh_common_args: >-
+  -o ProxyCommand="ssh -W %h:%p -q -i {{ lookup('config', 'DEFAULT_PRIVATE_KEY_FILE') }} -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null ubuntu@{{ hostvars[groups['bastion'][0]]['ansible_host'] }}"
+  -o StrictHostKeyChecking=no
+  -o UserKnownHostsFile=/dev/null

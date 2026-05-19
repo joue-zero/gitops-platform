@@ -1,0 +1,1649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phase 3 — Kubernetes & Helm</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600&family=Bricolage+Grotesque:wght@700;800&display=swap');
+
+:root {
+  --bg: #06080C;
+  --s1: #0A0E16;
+  --s2: #0F1520;
+  --s3: #141C28;
+  --border: #1A2436;
+  --border2: #243450;
+  --text: #C8D4E8;
+  --muted: #3D5070;
+  --dim: #1E2D42;
+  --acc: #7C3AED;
+  --acc2: #9F67FF;
+  --blue: #2D7DD2;
+  --green: #16A34A;
+  --red: #DC2626;
+  --yellow: #CA8A04;
+  --cyan: #0891B2;
+  --orange: #EA580C;
+  --pink: #DB2777;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Geist Mono', monospace;
+  min-height: 100vh;
+}
+
+/* scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 2px; }
+
+.shell {
+  display: grid;
+  grid-template-columns: 272px 1fr;
+  min-height: 100vh;
+}
+
+/* ── SIDEBAR ── */
+.sidebar {
+  background: var(--s1);
+  border-right: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.sb-top {
+  padding: 24px 18px 18px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.phase-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--acc2);
+  margin-bottom: 10px;
+}
+
+.phase-chip::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--acc);
+  box-shadow: 0 0 6px var(--acc);
+}
+
+.sb-title {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.sb-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.sb-pill {
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 2px;
+  border: 1px solid;
+}
+
+.sb-pill.k8s    { color: #60A5FA; border-color: #1E3A5F; background: #060F1E; }
+.sb-pill.helm   { color: var(--acc2); border-color: #3B1F6F; background: #0D061E; }
+.sb-pill.eks    { color: #FB923C; border-color: #5F2E0E; background: #1A0C04; }
+.sb-pill.week   { color: #4ADE80; border-color: #0F3A1F; background: #040F07; }
+
+.prog-section {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.prog-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 7px;
+}
+
+.prog-track {
+  height: 2px;
+  background: var(--border);
+  border-radius: 1px;
+}
+
+.prog-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--acc), var(--acc2));
+  border-radius: 1px;
+  transition: width 0.4s ease;
+}
+
+.nav-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px 0;
+}
+
+.nav-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 9px 18px;
+  cursor: pointer;
+  border-left: 2px solid transparent;
+  transition: all 0.15s;
+}
+
+.nav-item:hover { background: var(--s2); }
+
+.nav-item.active {
+  background: var(--s2);
+  border-left-color: var(--acc);
+}
+
+.nav-item.done .n-num {
+  background: var(--green);
+  color: #fff;
+}
+
+.n-num {
+  width: 18px; height: 18px;
+  border-radius: 2px;
+  background: var(--dim);
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+  transition: all 0.2s;
+}
+
+.nav-item.active .n-num {
+  background: var(--acc);
+  color: #fff;
+}
+
+.n-text { flex: 1; min-width: 0; }
+
+.n-title {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text);
+  line-height: 1.35;
+}
+
+.nav-item.active .n-title { color: #fff; }
+
+.n-sub {
+  font-size: 9px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.n-tag {
+  font-size: 8px;
+  padding: 1px 5px;
+  border-radius: 1px;
+  flex-shrink: 0;
+  margin-top: 3px;
+  letter-spacing: 0.05em;
+}
+
+.n-tag.helm   { background: #1A0A3A; color: var(--acc2); }
+.n-tag.k8s    { background: #0A1A3A; color: #60A5FA; }
+.n-tag.eks    { background: #1E0C04; color: #FB923C; }
+.n-tag.tf     { background: #0A1E0A; color: #4ADE80; }
+.n-tag.deep   { background: #1A0A1A; color: var(--pink); }
+
+/* ── MAIN ── */
+.main {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.main-head {
+  padding: 28px 36px 22px;
+  border-bottom: 1px solid var(--border);
+  background: var(--s1);
+  flex-shrink: 0;
+}
+
+.eyebrow {
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--acc2);
+  margin-bottom: 8px;
+}
+
+.headline {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+
+.step-desc {
+  font-size: 12px;
+  color: #5A7090;
+  line-height: 1.85;
+  max-width: 660px;
+}
+
+.tag-row {
+  display: flex;
+  gap: 5px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.tag {
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 2px;
+  border: 1px solid;
+}
+
+.tag.helm    { color: var(--acc2); border-color: #3B1F6F; background: #0D061E; }
+.tag.k8s     { color: #60A5FA;     border-color: #1E3A5F; background: #060F1E; }
+.tag.tf      { color: #4ADE80;     border-color: #0F3A1F; background: #040F07; }
+.tag.bash    { color: #FB923C;     border-color: #5F2E0E; background: #1A0C04; }
+.tag.concept { color: var(--pink); border-color: #5F0A3A; background: #1A0410; }
+.tag.eks     { color: #FDE68A;     border-color: #5F4A0A; background: #1A1404; }
+
+/* ── CONTENT ── */
+.content {
+  flex: 1;
+  padding: 24px 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow-y: auto;
+}
+
+/* ── CHUNK ── */
+.chunk {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.chunk-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  cursor: pointer;
+  background: var(--s1);
+  transition: background 0.15s;
+  user-select: none;
+}
+
+.chunk-head:hover { background: var(--s2); }
+.chunk.open .chunk-head { background: var(--s2); border-bottom: 1px solid var(--border); }
+
+.c-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.c-dot.helm    { background: var(--acc); }
+.c-dot.k8s     { background: var(--blue); }
+.c-dot.tf      { background: var(--green); }
+.c-dot.bash    { background: var(--orange); }
+.c-dot.concept { background: var(--pink); }
+.c-dot.eks     { background: var(--yellow); }
+.c-dot.check   { background: var(--green); }
+.c-dot.warn    { background: var(--red); }
+
+.c-label {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+  line-height: 1.3;
+}
+
+.c-badge {
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 2px;
+}
+
+.c-badge.do      { background: #060F1E; color: #60A5FA; }
+.c-badge.run     { background: #040F07; color: #4ADE80; }
+.c-badge.deep    { background: #1A0410; color: var(--pink); }
+.c-badge.concept { background: #1A0410; color: var(--pink); }
+.c-badge.warn    { background: #1A0404; color: #F87171; }
+.c-badge.cv      { background: #0D061E; color: var(--acc2); }
+
+.c-chev {
+  font-size: 10px;
+  color: var(--muted);
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.chunk.open .c-chev { transform: rotate(180deg); }
+
+.chunk-body {
+  display: none;
+  padding: 18px 18px;
+  background: var(--bg);
+  flex-direction: column;
+  gap: 14px;
+}
+
+.chunk.open .chunk-body { display: flex; }
+
+/* ── CODE ── */
+.cw { background: var(--s1); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+
+.cbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: var(--s2);
+  border-bottom: 1px solid var(--border);
+}
+
+.cfile { font-size: 10px; color: var(--muted); letter-spacing: 0.05em; }
+
+.cbtn {
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border: 1px solid var(--border2);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+
+.cbtn:hover { color: var(--text); border-color: var(--muted); }
+.cbtn.ok { color: #4ADE80; border-color: #4ADE80; }
+
+pre {
+  padding: 14px;
+  overflow-x: auto;
+  font-size: 11.5px;
+  line-height: 1.8;
+  color: var(--text);
+  font-family: 'Geist Mono', monospace;
+}
+
+.cm { color: #2D4060; font-style: italic; }
+.ck { color: #60A5FA; }
+.cv { color: #4ADE80; }
+.cs { color: #FCD34D; }
+.cf { color: #F87171; }
+.cp { color: #C084FC; }
+.co { color: #FB923C; }
+
+/* ── PROSE ── */
+.prose {
+  font-size: 12px;
+  color: #5A7090;
+  line-height: 1.9;
+}
+
+.prose strong { color: var(--text); font-weight: 500; }
+.prose code {
+  background: var(--s2);
+  border: 1px solid var(--border);
+  padding: 1px 5px;
+  border-radius: 2px;
+  font-size: 11px;
+  color: #60A5FA;
+}
+.prose em { color: #8090A8; font-style: italic; }
+
+/* ── CALLOUT ── */
+.callout {
+  border-radius: 3px;
+  padding: 11px 14px;
+  font-size: 12px;
+  line-height: 1.75;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.callout.info    { background: #04101A; border: 1px solid #0E2A4A; color: #60A5FA; }
+.callout.warn    { background: #120D00; border: 1px solid #3A2500; color: #D4A017; }
+.callout.success { background: #040E06; border: 1px solid #0A2A10; color: #4ADE80; }
+.callout.deep    { background: #10041A; border: 1px solid #3A0A5F; color: var(--acc2); }
+
+.callout-ico { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+/* ── WHY ── */
+.why {
+  border-left: 2px solid var(--acc);
+  padding: 11px 14px;
+  background: #0A0614;
+  border-radius: 0 3px 3px 0;
+}
+
+.why-lbl {
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--acc2);
+  margin-bottom: 6px;
+}
+
+.why p { font-size: 12px; color: #6A5080; line-height: 1.85; }
+.why p strong { color: #9A80B0; font-weight: 500; }
+
+/* ── ANALOGY BOX ── */
+.analogy {
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.analogy-head {
+  background: var(--s3);
+  padding: 8px 14px;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--pink);
+  border-bottom: 1px solid var(--border);
+}
+
+.analogy-body {
+  padding: 12px 14px;
+  font-size: 12px;
+  color: #5A7090;
+  line-height: 1.85;
+  background: #08040E;
+}
+
+.analogy-body strong { color: #A090C0; font-weight: 500; }
+
+/* ── COMPARE TABLE ── */
+.cmp {
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  font-size: 11px;
+}
+
+.cmp-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  border-bottom: 1px solid var(--border);
+}
+
+.cmp-row:last-child { border-bottom: none; }
+.cmp-row.head { background: var(--s2); }
+
+.cmp-cell {
+  padding: 9px 12px;
+  border-right: 1px solid var(--border);
+  line-height: 1.5;
+}
+
+.cmp-cell:last-child { border-right: none; }
+.cmp-row.head .cmp-cell { color: var(--muted); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; }
+.cmp-cell.helm-col { color: var(--acc2); }
+.cmp-cell.k8s-col  { color: #60A5FA; }
+.cmp-cell.val-col  { color: #5A7090; }
+
+/* ── FTREE ── */
+.ftree {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 12px 14px;
+  font-size: 11.5px;
+  line-height: 1.95;
+}
+
+.ftree .dir { color: #fff; font-weight: 500; }
+.ftree .tf  { color: #4ADE80; }
+.ftree .yml { color: #60A5FA; }
+.ftree .new { color: var(--dim); font-style: italic; font-size: 10px; }
+.ftree .helm-f { color: var(--acc2); }
+
+/* ── CHECKLIST ── */
+.chklist { display: flex; flex-direction: column; gap: 5px; }
+
+.chk-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 12px;
+  color: #5A7090;
+  line-height: 1.5;
+  padding: 7px 12px;
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+}
+
+.chk-item .ci { color: #4ADE80; flex-shrink: 0; font-size: 13px; }
+.chk-item .ci.arrow { color: var(--acc2); }
+
+/* ── BOTTOM NAV ── */
+.bot-nav {
+  padding: 16px 36px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--border);
+  background: var(--s1);
+  flex-shrink: 0;
+}
+
+.nbtn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-family: 'Geist Mono', monospace;
+  font-size: 11px;
+  padding: 9px 18px;
+  border: 1px solid var(--border2);
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.15s;
+  letter-spacing: 0.04em;
+}
+
+.nbtn:hover { background: var(--s2); border-color: var(--muted); }
+.nbtn:disabled { opacity: 0.2; cursor: default; }
+
+.nbtn.primary {
+  background: var(--acc);
+  border-color: var(--acc);
+  color: #fff;
+  font-weight: 600;
+}
+
+.nbtn.primary:hover { background: var(--acc2); border-color: var(--acc2); }
+
+.step-lbl { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sb-top">
+    <div class="phase-chip">Phase 3</div>
+    <div class="sb-title">Kubernetes on EKS + Helm Charts</div>
+    <div class="sb-pills">
+      <span class="sb-pill week">Week 4–5</span>
+      <span class="sb-pill k8s">Kubernetes</span>
+      <span class="sb-pill helm">Helm</span>
+      <span class="sb-pill eks">EKS</span>
+    </div>
+  </div>
+  <div class="prog-section">
+    <div class="prog-row">
+      <span>progress</span>
+      <span id="prog-txt">0 / 9</span>
+    </div>
+    <div class="prog-track">
+      <div class="prog-fill" id="prog-fill" style="width:0%"></div>
+    </div>
+  </div>
+  <nav class="nav-scroll" id="nav-scroll"></nav>
+</aside>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="main-head" id="main-head"></div>
+  <div class="content" id="content"></div>
+  <div class="bot-nav">
+    <button class="nbtn" id="btn-prev" onclick="go(-1)">← prev</button>
+    <span class="step-lbl" id="step-lbl"></span>
+    <button class="nbtn primary" id="btn-next" onclick="go(1)">next →</button>
+  </div>
+</div>
+
+</div>
+
+<script>
+const STEPS = [
+
+// ── 0 ──────────────────────────────────────────────────────
+{
+  title: "What Phase 3 builds",
+  sub: "overview", eyebrow: "Phase 3 · Overview",
+  headline: "Kubernetes on EKS + Helm",
+  desc: "You have an image in ECR. Now you need a cluster to run it. This phase provisions EKS with Terraform, writes Helm charts from scratch, and deploys your app to Kubernetes. Helm gets a full deep-dive — by the end you will understand every file in a chart and why it exists.",
+  tags: ["k8s","helm","eks","tf"],
+  tag: "overview",
+  chunks: [
+    {
+      dot:"concept", label:"What you will have at the end of Phase 3", badge:"overview", bt:"concept",
+      body:`<div class="ftree">
+devops-platform/
+├── terraform/modules/<span class="dir">eks/</span>        <span class="new"># EKS cluster + node group</span>
+└── helm/
+    └── <span class="dir">app/</span>                      <span class="new"># your first Helm chart</span>
+        ├── <span class="helm-f">Chart.yaml</span>            <span class="new"># chart metadata</span>
+        ├── <span class="helm-f">values.yaml</span>           <span class="new"># default configuration values</span>
+        └── <span class="dir">templates/</span>
+            ├── <span class="yml">deployment.yaml</span>       <span class="new"># Kubernetes Deployment</span>
+            ├── <span class="yml">service.yaml</span>          <span class="new"># Kubernetes Service</span>
+            ├── <span class="yml">ingress.yaml</span>          <span class="new"># Kubernetes Ingress</span>
+            ├── <span class="yml">hpa.yaml</span>              <span class="new"># HorizontalPodAutoscaler</span>
+            ├── <span class="yml">configmap.yaml</span>        <span class="new"># environment config</span>
+            └── <span class="yml">_helpers.tpl</span>          <span class="new"># shared template functions</span>
+</div>`
+    },
+    {
+      dot:"concept", label:"The flow: git push → running pod", badge:"concept", bt:"concept",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">end-to-end flow</span></div><pre>
+git push → GitHub Actions builds image → pushes to ECR
+                                                │
+                                                ▼
+                              ECR: app:a3f9c12 ready
+                                                │
+                                                ▼
+              helm upgrade --install app ./helm/app \
+                --set image.tag=a3f9c12
+
+                                                │
+                                    Kubernetes does:
+                                                │
+                              ┌─────────────────┼─────────────────┐
+                              ▼                 ▼                 ▼
+                        pulls image       creates pods      routes traffic
+                        from ECR          in private        via Ingress →
+                                          subnets           ALB → pod:8080
+</pre></div>`
+    }
+  ]
+},
+
+// ── 1 ──────────────────────────────────────────────────────
+{
+  title: "What Helm actually is",
+  sub: "helm deep-dive", eyebrow: "Step 1 — Deep Dive",
+  headline: "Helm from first principles",
+  desc: "Most tutorials tell you what Helm commands to run. This step tells you WHY Helm exists, what problem it solves, and how every file in a chart relates to each other. Read this fully before writing a single line.",
+  tags: ["helm","concept"],
+  tag: "deep",
+  chunks: [
+    {
+      dot:"concept", label:"The problem Helm solves — why raw Kubernetes YAML is painful", badge:"deep dive", bt:"deep",
+      body:`<div class="prose">Without Helm, deploying to Kubernetes means writing raw YAML files and applying them with <code>kubectl apply -f</code>. This works for one environment. It breaks when you have two.<br><br>Imagine you want to deploy to staging and production. In staging you want 1 replica, image tag <code>dev-latest</code>, and no TLS. In production you want 3 replicas, image tag <code>a3f9c12</code>, and TLS on. With raw YAML you now maintain two near-identical sets of files and manually change values between deployments. Every deploy is error-prone.</div>
+<div class="analogy">
+  <div class="analogy-head">The analogy that makes it click</div>
+  <div class="analogy-body">
+    Think of Kubernetes YAML as an HTML page where every value is hardcoded — font color, text, layout, all baked in. If you want a dark mode version you copy the entire file and change values manually.<br><br>
+    <strong>Helm is the templating engine.</strong> Like how PHP or Blade templates let you write <code>{{ $color }}</code> and pass different values at runtime, Helm lets you write <code>{{ .Values.replicaCount }}</code> in your YAML and pass different values per environment. One template. Many deployments. No copy-paste.
+  </div>
+</div>`,
+      why:"This is the entire reason Helm exists. Not to make deployment fancy — to make YAML reusable across environments without copy-paste. Everything else (versioning, rollback, dependencies) is secondary."
+    },
+    {
+      dot:"concept", label:"The three things Helm does", badge:"concept", bt:"concept",
+      body:`<div class="cmp">
+  <div class="cmp-row head">
+    <div class="cmp-cell">Helm feature</div>
+    <div class="cmp-cell">What it means</div>
+    <div class="cmp-cell">Real-world example</div>
+  </div>
+  <div class="cmp-row">
+    <div class="cmp-cell helm-col">Templating</div>
+    <div class="cmp-cell val-col">Injects values into YAML at deploy time</div>
+    <div class="cmp-cell val-col">image.tag changes per deploy without editing files</div>
+  </div>
+  <div class="cmp-row">
+    <div class="cmp-cell helm-col">Releases</div>
+    <div class="cmp-cell val-col">Tracks what version is deployed where</div>
+    <div class="cmp-cell val-col">helm rollback app 2 reverts to previous deploy</div>
+  </div>
+  <div class="cmp-row">
+    <div class="cmp-cell helm-col">Packaging</div>
+    <div class="cmp-cell val-col">Bundles all templates into a .tgz you can share</div>
+    <div class="cmp-cell val-col">Install nginx-ingress with one helm install command</div>
+  </div>
+</div>`
+    },
+    {
+      dot:"concept", label:"Every file in a chart — what it is and why it exists", badge:"deep dive", bt:"deep",
+      body:`<div class="cmp">
+  <div class="cmp-row head">
+    <div class="cmp-cell">File</div>
+    <div class="cmp-cell">What it is</div>
+    <div class="cmp-cell">Analogy</div>
+  </div>
+  <div class="cmp-row">
+    <div class="cmp-cell helm-col">Chart.yaml</div>
+    <div class="cmp-cell val-col">Name, version, description of this chart</div>
+    <div class="cmp-cell val-col">package.json — the manifest</div>
+  </div>
+  <div class="cmp-row">
+    <div class="cmp-cell helm-col">values.yaml</div>
+    <div class="cmp-cell val-col">Default values for every variable in templates</div>
+    <div class="cmp-cell val-col">.env.example — safe defaults anyone can override</div>
+  </div>
+  <div class="cmp-row">
+    <div class="cmp-cell helm-col">templates/*.yaml</div>
+    <div class="cmp-cell val-col">Kubernetes manifests with {{ .Values.x }} placeholders</div>
+    <div class="cmp-cell val-col">Blade/EJS templates — logic + variables</div>
+  </div>
+  <div class="cmp-row">
+    <div class="cmp-cell helm-col">templates/_helpers.tpl</div>
+    <div class="cmp-cell val-col">Reusable named template snippets</div>
+    <div class="cmp-cell val-col">A helpers.php file with shared functions</div>
+  </div>
+</div>
+<div class="prose" style="margin-top:12px">When you run <code>helm install</code>, Helm reads <code>values.yaml</code>, merges any overrides you pass via <code>--set</code> or <code>-f custom.yaml</code>, then renders all the <code>templates/*.yaml</code> files with those values substituted in. The result is plain Kubernetes YAML that gets sent to the cluster. <strong>Helm is gone after that point</strong> — Kubernetes doesn't know Helm exists.</div>`
+    },
+    {
+      dot:"concept", label:"The Helm template language — syntax you need to know", badge:"deep dive", bt:"deep",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">helm template syntax reference</span></div><pre>
+<span class="cm"># Values come from values.yaml or --set flags</span>
+{{ .Values.replicaCount }}          <span class="cm"># reads replicaCount from values.yaml</span>
+{{ .Values.image.repository }}      <span class="cm"># nested value: image.repository</span>
+
+<span class="cm"># Chart metadata</span>
+{{ .Chart.Name }}                   <span class="cm"># the chart name from Chart.yaml</span>
+{{ .Chart.Version }}                <span class="cm"># chart version</span>
+
+<span class="cm"># Release info (set by Helm at deploy time)</span>
+{{ .Release.Name }}                 <span class="cm"># "app" — the name you give in helm install</span>
+{{ .Release.Namespace }}            <span class="cm"># Kubernetes namespace being deployed into</span>
+
+<span class="cm"># Conditionals</span>
+{{- if .Values.ingress.enabled }}
+  ... only renders this block if ingress.enabled is true ...
+{{- end }}
+
+<span class="cm"># Loops</span>
+{{- range .Values.ingress.hosts }}
+  - host: {{ . }}                   <span class="cm"># "." is the current loop item</span>
+{{- end }}
+
+<span class="cm"># Named templates from _helpers.tpl</span>
+{{ include "app.fullname" . }}      <span class="cm"># calls the helper named "app.fullname"</span>
+
+<span class="cm"># Default values (safe fallback)</span>
+{{ .Values.port | default 8080 }}
+
+<span class="cm"># Indentation (critical in YAML)</span>
+{{ toYaml .Values.resources | indent 10 }}
+</pre></div>`,
+      why:"The <code>{{- }}</code> (dash) trims whitespace before the tag. This matters in YAML because indentation is structural — extra blank lines can break the manifest. You will use <code>{{-</code> constantly."
+    }
+  ]
+},
+
+// ── 2 ──────────────────────────────────────────────────────
+{
+  title: "Kubernetes objects you need to know",
+  sub: "k8s fundamentals", eyebrow: "Step 2 — Concepts",
+  headline: "K8s objects before you write YAML",
+  desc: "Your Helm chart creates 5 Kubernetes objects. You need to understand each one before you write the templates — otherwise the YAML is just noise. This is the minimal set for deploying a real app.",
+  tags: ["k8s","concept"],
+  tag: "deep",
+  chunks: [
+    {
+      dot:"k8s", label:"Deployment — runs and manages your pods", badge:"deep dive", bt:"deep",
+      body:`<div class="analogy">
+  <div class="analogy-head">Mental model</div>
+  <div class="analogy-body">
+    A <strong>Pod</strong> is one running instance of your container — like one PHP-FPM process. A <strong>Deployment</strong> is the manager that says "I want 3 of these always running." If one dies, Deployment notices and starts a replacement. If you push a new image, Deployment does a rolling update — killing old pods one at a time, starting new ones, so there's zero downtime.
+  </div>
+</div>
+<div class="cw"><div class="cbar"><span class="cfile">what a Deployment controls</span></div><pre>
+Deployment
+  └── ReplicaSet (managed automatically)
+        ├── Pod 1  [app:a3f9c12]  Running
+        ├── Pod 2  [app:a3f9c12]  Running
+        └── Pod 3  [app:a3f9c12]  Running
+
+<span class="cm"># Rolling update when you deploy app:b4d8e21:</span>
+Deployment kills Pod 1 → starts new Pod 1 [app:b4d8e21]
+Deployment kills Pod 2 → starts new Pod 2 [app:b4d8e21]
+Deployment kills Pod 3 → starts new Pod 3 [app:b4d8e21]
+<span class="cm"># At no point are all 3 pods down simultaneously</span>
+</pre></div>`
+    },
+    {
+      dot:"k8s", label:"Service — stable network address for your pods", badge:"deep dive", bt:"deep",
+      body:`<div class="analogy">
+  <div class="analogy-head">Mental model</div>
+  <div class="analogy-body">
+    Pods get random IP addresses that change every time they restart. A <strong>Service</strong> is a stable virtual IP that always points to whichever pods are currently healthy. Think of it as a DNS name + load balancer inside the cluster. Other services don't talk to pods directly — they talk to the Service.
+  </div>
+</div>
+<div class="cw"><div class="cbar"><span class="cfile">service types</span></div><pre>
+ClusterIP   → internal only. Reachable inside cluster. <span class="co">Use this for your app.</span>
+NodePort    → exposes a port on every node. Avoid in production.
+LoadBalancer → provisions an AWS load balancer. Expensive per service.
+
+<span class="cm"># Your traffic path:</span>
+Internet → Ingress (one ALB) → Service (ClusterIP) → Pods
+<span class="cm"># NOT: Internet → LoadBalancer Service (one ALB per service = expensive)</span>
+</pre></div>`,
+      why:"Most beginners create LoadBalancer services for every app — that means one AWS ALB per service, each costing ~$20/month. The correct pattern is ONE Ingress controller with ONE ALB, routing to multiple ClusterIP services by hostname or path."
+    },
+    {
+      dot:"k8s", label:"Ingress — routes external HTTP traffic into the cluster", badge:"deep dive", bt:"deep",
+      body:`<div class="analogy">
+  <div class="analogy-head">Mental model</div>
+  <div class="analogy-body">
+    An <strong>Ingress</strong> is a set of routing rules: "requests for api.myapp.com go to the api Service, requests for myapp.com go to the frontend Service." It doesn't do the routing itself — it configures an <strong>Ingress Controller</strong> (NGINX, AWS Load Balancer Controller) which does the actual work.
+  </div>
+</div>
+<div class="cw"><div class="cbar"><span class="cfile">ingress routing rules</span></div><pre>
+Ingress rules:
+  host: app.devops-platform.com
+    path: /api  → Service: api-service:8080
+    path: /     → Service: app-service:8080
+</pre></div>`
+    },
+    {
+      dot:"k8s", label:"HPA — auto-scales pods under load", badge:"concept", bt:"concept",
+      body:`<div class="prose">A <strong>HorizontalPodAutoscaler</strong> watches CPU/memory metrics and automatically adds or removes pods. You set a target (e.g. keep CPU at 70%) and a min/max replica count. When traffic spikes, HPA adds pods. When traffic drops, it removes them. You pay for what you use.<br><br>HPA talks to the Kubernetes Metrics Server — you need to install that in the cluster too.</div>`
+    },
+    {
+      dot:"k8s", label:"ConfigMap — environment config without baking it into the image", badge:"concept", bt:"concept",
+      body:`<div class="prose">A <strong>ConfigMap</strong> holds non-secret configuration as key-value pairs. You mount it into your pod as environment variables or files. This means the same Docker image runs in every environment — you change the ConfigMap, not the image.<br><br>For secrets (DB passwords, API keys) use a <strong>Secret</strong> object — same structure but base64-encoded and restricted by RBAC. In production, pull secrets from AWS Secrets Manager instead of storing them in Kubernetes Secrets.</div>`
+    }
+  ]
+},
+
+// ── 3 ──────────────────────────────────────────────────────
+{
+  title: "EKS cluster with Terraform",
+  sub: "infrastructure", eyebrow: "Step 3",
+  headline: "Provision EKS via Terraform",
+  desc: "EKS is managed Kubernetes — AWS runs the control plane (masters), you provide worker nodes. You provision it with Terraform so it's reproducible and version-controlled.",
+  tags: ["eks","tf"],
+  tag: "tf",
+  chunks: [
+    {
+      dot:"tf", label:"modules/eks/variables.tf", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terraform/modules/eks/variables.tf</span><button class="cbtn" onclick="cp(this)">copy</button></div><pre>
+variable "project_name"       { type = string }
+variable "environment"        { type = string }
+variable "vpc_id"             { type = string }
+variable "private_subnet_ids" { type = list(string) }
+variable "cluster_version"    { type = string; default = "1.29" }
+variable "node_instance_type" { type = string; default = "t3.medium" }
+variable "node_desired_size"  { type = number; default = 2 }
+variable "node_min_size"      { type = number; default = 1 }
+variable "node_max_size"      { type = number; default = 4 }
+</pre></div>`
+    },
+    {
+      dot:"tf", label:"modules/eks/main.tf — cluster + node group", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terraform/modules/eks/main.tf</span><button class="cbtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># ── IAM: cluster role ─────────────────────────────────</span>
+resource "<span class="ck">aws_iam_role</span>" "<span class="cv">cluster</span>" {
+  name = "<span class="cs">\${var.project_name}-eks-cluster-role</span>"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = { Service = "eks.amazonaws.com" }
+    }]
+  })
+}
+
+resource "<span class="ck">aws_iam_role_policy_attachment</span>" "<span class="cv">cluster_policy</span>" {
+  role       = aws_iam_role.cluster.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
+}
+
+<span class="cm"># ── IAM: node group role ──────────────────────────────</span>
+resource "<span class="ck">aws_iam_role</span>" "<span class="cv">nodes</span>" {
+  name = "<span class="cs">\${var.project_name}-eks-node-role</span>"
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action    = "sts:AssumeRole"
+      Effect    = "Allow"
+      Principal = { Service = "ec2.amazonaws.com" }
+    }]
+  })
+}
+
+resource "<span class="ck">aws_iam_role_policy_attachment</span>" "<span class="cv">node_policy</span>" {
+  for_each = toset([
+    "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy",
+    "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy",
+    "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly",
+  ])
+  role       = aws_iam_role.nodes.name
+  policy_arn = each.value
+}
+
+<span class="cm"># ── EKS Cluster ───────────────────────────────────────</span>
+resource "<span class="ck">aws_eks_cluster</span>" "<span class="cv">main</span>" {
+  name     = "<span class="cs">\${var.project_name}-cluster</span>"
+  role_arn = aws_iam_role.cluster.arn
+  version  = var.cluster_version
+
+  vpc_config {
+    subnet_ids              = var.private_subnet_ids
+    endpoint_private_access = true
+    endpoint_public_access  = true   <span class="cm"># set false after bastion is set up</span>
+  }
+
+  depends_on = [aws_iam_role_policy_attachment.cluster_policy]
+}
+
+<span class="cm"># ── Node Group ────────────────────────────────────────</span>
+resource "<span class="ck">aws_eks_node_group</span>" "<span class="cv">workers</span>" {
+  cluster_name    = aws_eks_cluster.main.name
+  node_group_name = "<span class="cs">\${var.project_name}-workers</span>"
+  node_role_arn   = aws_iam_role.nodes.arn
+  subnet_ids      = var.private_subnet_ids
+  instance_types  = [var.node_instance_type]
+
+  scaling_config {
+    desired_size = var.node_desired_size
+    min_size     = var.node_min_size
+    max_size     = var.node_max_size
+  }
+
+  update_config { max_unavailable = 1 }
+
+  depends_on = [aws_iam_role_policy_attachment.node_policy]
+}
+</pre></div>`,
+      why:"Worker nodes go in <strong>private subnets</strong>. They pull images from ECR via the NAT Gateway. They never need a public IP. The control plane endpoint is temporarily public so you can run kubectl from your laptop — you restrict it later."
+    },
+    {
+      dot:"tf", label:"modules/eks/outputs.tf + wire into root main.tf", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terraform/modules/eks/outputs.tf</span><button class="cbtn" onclick="cp(this)">copy</button></div><pre>
+output "cluster_name"     { value = aws_eks_cluster.main.name }
+output "cluster_endpoint" { value = aws_eks_cluster.main.endpoint }
+output "cluster_ca"       { value = aws_eks_cluster.main.certificate_authority[0].data }
+</pre></div>
+<div class="cw"><div class="cbar"><span class="cfile">terraform/main.tf — add this module block</span><button class="cbtn" onclick="cp(this)">copy</button></div><pre>
+module "<span class="cv">eks</span>" {
+  source              = "./modules/eks"
+  project_name        = var.project_name
+  environment         = var.environment
+  vpc_id              = module.networking.vpc_id
+  private_subnet_ids  = module.networking.private_subnet_ids
+}
+</pre></div>
+<div class="cw"><div class="cbar"><span class="cfile">terminal — apply and configure kubectl</span><button class="cbtn" onclick="cp(this)">copy</button></div><pre>
+terraform init && terraform apply -auto-approve
+
+<span class="cm"># Configure kubectl to talk to your new cluster</span>
+aws eks update-kubeconfig \
+  --region eu-central-1 \
+  --name devops-platform-cluster
+
+<span class="cm"># Verify nodes are ready</span>
+kubectl get nodes
+<span class="cm"># NAME                          STATUS   ROLES    AGE
+# ip-10-0-10-xx.ec2.internal   Ready    &lt;none&gt;   2m</span>
+</pre></div>`
+    }
+  ]
+},
+
+// ── 4 ──────────────────────────────────────────────────────
+{
+  title: "Write Chart.yaml + values.yaml",
+  sub: "helm chart", eyebrow: "Step 4",
+  headline: "Chart.yaml &amp; values.yaml",
+  desc: "These two files are the foundation of your chart. Chart.yaml is the identity. values.yaml is every configuration knob your chart exposes — you set sensible defaults here and override per environment.",
+  tags: ["helm"],
+  tag: "helm",
+  chunks: [
+    {
+      dot:"helm", label:"Create the chart scaffold", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal</span><button class="cbtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Create chart directory manually (don't use helm create —</span>
+<span class="cm"># it generates bloat. We write everything from scratch.)</span>
+mkdir -p helm/app/templates
+touch helm/app/Chart.yaml
+touch helm/app/values.yaml
+touch helm/app/templates/{deployment.yaml,service.yaml,ingress.yaml,hpa.yaml,configmap.yaml,_helpers.tpl}
+</pre></div>`
+    },
+    {
+      dot:"helm", label:"Chart.yaml — the chart identity file", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">helm/app/Chart.yaml</span><button class="cbtn" onclick="cp(this)">copy</button></div><pre>
+apiVersion: v2           <span class="cm"># Helm 3 uses v2</span>
+name: app
+description: DevOps Platform — main application chart
+type: application        <span class="cm"># "application" or "library" (library = shared helpers only)</span>
+version: 0.1.0           <span class="cm"># chart version — bump when you change the chart structure</span>
+appVersion: "1.0.0"      <span class="cm"># app version — informational, shown in helm list</span>
+</pre></div>`,
+      why:"There are two versions: <code>version</code> is the chart version (how the templates are structured), <code>appVersion</code> is the application version. They're independent. You can bump the chart version without changing the app and vice versa."
+    },
+    {
+      dot:"helm", label:"values.yaml — every configurable knob with safe defaults", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">helm/app/values.yaml</span><button class="cbtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Replica count — how many pods to run</span>
+replicaCount: 2
+
+<span class="cm"># Image configuration</span>
+image:
+  repository: 123456789012.dkr.ecr.eu-central-1.amazonaws.com/devops-platform/app
+  tag: latest          <span class="cm"># overridden at deploy time with the git SHA</span>
+  pullPolicy: Always   <span class="cm"># Always re-pull. Use IfNotPresent in dev.</span>
+
+<span class="cm"># Service — how the app is exposed inside the cluster</span>
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 8080     <span class="cm"># the port your app listens on inside the container</span>
+
+<span class="cm"># Ingress — external traffic routing</span>
+ingress:
+  enabled: true
+  className: nginx     <span class="cm"># which ingress controller to use</span>
+  host: app.devops-platform.com
+  tls: false           <span class="cm"># set true in prod with cert-manager</span>
+
+<span class="cm"># Resource limits — CPU and memory per pod</span>
+resources:
+  requests:
+    cpu: 100m          <span class="cm"># 100 millicores = 0.1 CPU</span>
+    memory: 128Mi
+  limits:
+    cpu: 500m          <span class="cm"># never use more than 0.5 CPU</span>
+    memory: 512Mi
+
+<span class="cm"># HPA — autoscaling config</span>
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 8
+  targetCPUUtilizationPercentage: 70
+
+<span class="cm"># Environment variables injected into the container</span>
+env:
+  NODE_ENV: production
+  PORT: "8080"
+  APP_VERSION: "1.0.0"
+
+<span class="cm"># Node selection — run on specific node types (optional)</span>
+nodeSelector: {}
+tolerations: []
+affinity: {}
+</pre></div>`,
+      why:"<strong>Resources requests vs limits.</strong> Request = what Kubernetes reserves for your pod when scheduling. Limit = the hard cap — your pod gets killed if it exceeds this. Set requests low enough to fit pods on nodes, limits high enough not to kill the app under load. No limits = one runaway pod can starve the whole node."
+    }
+  ]
+},
+
+// ── 5 ──────────────────────────────────────────────────────
+{
+  title: "Write the Helm templates",
+  sub: "helm templates", eyebrow: "Step 5",
+  headline: "templates/ — every manifest explained",
+  desc: "This is where Helm's power shows. Each file is a Kubernetes manifest with {{ .Values.x }} placeholders. Read each template and trace how the values.yaml entries flow into the final YAML.",
+  tags: ["helm","k8s"],
+  tag: "helm",
+  chunks: [
+    {
+      dot:"helm", label:"_helpers.tpl — shared named templates", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">helm/app/templates/_helpers.tpl</span><button class="cbtn" onclick="cp(this)">copy</button></div><pre>
+{{/*
+  app.fullname: generates a consistent name like "app-devops-platform"
+  Used in every template so naming is consistent across all objects.
+*/}}
+{{- define "app.fullname" -}}
+{{- printf "%s-%s" .Release.Name .Chart.Name | trunc 63 | trimSuffix "-" }}
+{{- end }}
+
+{{/*
+  app.labels: standard labels applied to every Kubernetes object.
+  Labels are how Kubernetes connects objects — a Service finds
+  its pods by matching these labels.
+*/}}
+{{- define "app.labels" -}}
+helm.sh/chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+app.kubernetes.io/name: {{ .Chart.Name }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+app.kubernetes.io/managed-by: {{ .Release.Service }}
+{{- end }}
+
+{{/*
+  app.selectorLabels: subset of labels used by Service to select pods.
+  Must match exactly between Deployment.spec.selector and Service.spec.selector.
+*/}}
+{{- define "app.selectorLabels" -}}
+app.kubernetes.io/name: {{ .Chart.Name }}
+app.kubernetes.io/instance: {{ .Release.Name }}
+{{- end }}
+</pre></div>`,
+      why:"The <code>selectorLabels</code> helper is critical. A Service routes traffic to pods by matching labels. If the labels in the Deployment spec don't exactly match what the Service selector expects, traffic never reaches your pods. By defining it once in <code>_helpers.tpl</code> and using it in both files, you guarantee they always match."
+    },
+    {
+      dot:"helm", label:"deployment.yaml — runs your pods", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">helm/app/templates/deployment.yaml</span><button class="cbtn" onclick="cp(this)">copy</button></div><pre>
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "app.fullname" . }}        <span class="cm"># uses _helpers.tpl</span>
+  labels:
+    {{- include "app.labels" . | nindent 4 }} <span class="cm"># nindent = indent + newline</span>
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "app.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "app.selectorLabels" . | nindent 8 }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.targetPort }}
+              protocol: TCP
+
+          <span class="cm"># Load env vars from ConfigMap</span>
+          envFrom:
+            - configMapRef:
+                name: {{ include "app.fullname" . }}-config
+
+          <span class="cm"># Resource limits from values.yaml</span>
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+
+          <span class="cm"># Liveness: is the pod alive? Restart if this fails.</span>
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+
+          <span class="cm"># Readiness: is the pod ready to receive traffic?</span>
+          <span class="cm"># Service only routes to pods that pass this check.</span>
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+</pre></div>`,
+      why:"<strong>Liveness vs Readiness probes.</strong> Liveness: if this fails, restart the pod. Readiness: if this fails, stop sending traffic to this pod (but don't restart it). A pod starting up should fail readiness until it's warmed up — without this probe, the Service sends traffic to a pod that isn't ready yet and users get errors."
+    },
+    {
+      dot:"helm", label:"service.yaml — stable internal address", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">helm/app/templates/service.yaml</span><button class="cbtn" onclick="cp(this)">copy</button></div><pre>
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "app.fullname" . }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+spec:
+  type: {{ .Values.service.type }}
+  ports:
+    - port: {{ .Values.service.port }}           <span class="cm"># port the Service listens on</span>
+      targetPort: {{ .Values.service.targetPort }} <span class="cm"># port on the pod</span>
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "app.selectorLabels" . | nindent 4 }} <span class="cm"># must match Deployment labels</span>
+</pre></div>`
+    },
+    {
+      dot:"helm", label:"ingress.yaml — external routing", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">helm/app/templates/ingress.yaml</span><button class="cbtn" onclick="cp(this)">copy</button></div><pre>
+{{- if .Values.ingress.enabled }}        <span class="cm"># entire file skipped if ingress.enabled: false</span>
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "app.fullname" . }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "app.fullname" . }}
+                port:
+                  number: {{ .Values.service.port }}
+  {{- if .Values.ingress.tls }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host }}
+      secretName: {{ include "app.fullname" . }}-tls
+  {{- end }}
+{{- end }}
+</pre></div>`,
+      why:"The <code>{{- if .Values.ingress.enabled }}</code> wrapping the entire file means this template renders to nothing if you set <code>ingress.enabled: false</code>. This is the Helm pattern for optional components — the template exists but produces no output. You disable features by flipping a value, not by deleting files."
+    },
+    {
+      dot:"helm", label:"hpa.yaml — autoscaling", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">helm/app/templates/hpa.yaml</span><button class="cbtn" onclick="cp(this)">copy</button></div><pre>
+{{- if .Values.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "app.fullname" . }}
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "app.fullname" . }}
+  minReplicas: {{ .Values.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.autoscaling.targetCPUUtilizationPercentage }}
+{{- end }}
+</pre></div>`
+    },
+    {
+      dot:"helm", label:"configmap.yaml — environment variables", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">helm/app/templates/configmap.yaml</span><button class="cbtn" onclick="cp(this)">copy</button></div><pre>
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "app.fullname" . }}-config
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+data:
+  {{- range $key, $value := .Values.env }}
+  {{ $key }}: {{ $value | quote }}
+  {{- end }}
+</pre></div>`,
+      why:"The <code>range</code> loop iterates every key-value pair in <code>.Values.env</code> and renders them as ConfigMap entries. When you add a new env var, you only touch <code>values.yaml</code> — the template never changes. This is the correct pattern."
+    }
+  ]
+},
+
+// ── 6 ──────────────────────────────────────────────────────
+{
+  title: "Install NGINX Ingress Controller",
+  sub: "ingress controller", eyebrow: "Step 6",
+  headline: "Install the Ingress Controller",
+  desc: "An Ingress resource is just a set of routing rules. Something has to read those rules and actually route the traffic. That something is the Ingress Controller — you install it once with Helm and it watches all your Ingress objects.",
+  tags: ["helm","k8s","bash"],
+  tag: "helm",
+  chunks: [
+    {
+      dot:"k8s", label:"Install metrics-server (required for HPA)", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal</span><button class="cbtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># HPA needs metrics-server to read CPU/memory from pods</span>
+kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+
+<span class="cm"># Verify it starts</span>
+kubectl get deployment metrics-server -n kube-system
+</pre></div>`
+    },
+    {
+      dot:"helm", label:"Install NGINX Ingress Controller via Helm", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal</span><button class="cbtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Add the ingress-nginx Helm repo</span>
+helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+helm repo update
+
+<span class="cm"># Install into its own namespace</span>
+helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx \
+  --create-namespace \
+  --set controller.service.type=LoadBalancer
+
+<span class="cm"># Wait for external IP to be assigned (this takes 1-2 min)</span>
+kubectl get svc -n ingress-nginx ingress-nginx-controller -w
+
+<span class="cm"># Copy the EXTERNAL-IP — this is your ALB DNS name</span>
+<span class="cm"># You'll point your domain to this</span>
+</pre></div>`,
+      why:"<code>helm upgrade --install</code> is the idempotent deploy command — install if not exists, upgrade if it does. You will use this exact pattern for your own chart too. Never use <code>helm install</code> alone in scripts — it fails if the release already exists."
+    }
+  ]
+},
+
+// ── 7 ──────────────────────────────────────────────────────
+{
+  title: "Deploy with Helm",
+  sub: "deploy", eyebrow: "Step 7",
+  headline: "Deploy your app to EKS",
+  desc: "Everything is wired up. Now you deploy, verify, and learn the Helm workflow you'll use on every subsequent deploy.",
+  tags: ["helm","bash","k8s"],
+  tag: "helm",
+  chunks: [
+    {
+      dot:"helm", label:"Lint and dry-run before deploying", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal</span><button class="cbtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Lint: check chart for errors</span>
+helm lint helm/app
+
+<span class="cm"># Template: render the chart locally without deploying</span>
+<span class="cm"># Pipe to less to read — this is what gets sent to Kubernetes</span>
+helm template app helm/app \
+  --set image.tag=a3f9c12 | less
+
+<span class="cm"># Dry run: renders AND validates against the cluster API</span>
+helm upgrade --install app helm/app \
+  --namespace devops-platform \
+  --create-namespace \
+  --set image.tag=a3f9c12 \
+  --dry-run --debug
+</pre></div>`,
+      why:"<strong>Always <code>helm template</code> before deploying.</strong> It shows you the exact YAML that will be sent to the cluster. When something behaves unexpectedly, this is the first debugging step — compare the rendered output to what you expected."
+    },
+    {
+      dot:"helm", label:"Deploy for real", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal</span><button class="cbtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Create the namespace</span>
+kubectl create namespace devops-platform --dry-run=client -o yaml | kubectl apply -f -
+
+<span class="cm"># Deploy (--install creates if not exists, upgrade if it does)</span>
+helm upgrade --install app helm/app \
+  --namespace devops-platform \
+  --set image.tag=$(git rev-parse --short HEAD) \
+  --set replicaCount=2 \
+  --wait \      <span class="cm"># wait until pods are running before returning</span>
+  --timeout 5m
+
+<span class="cm"># Check the release</span>
+helm list -n devops-platform
+helm status app -n devops-platform
+</pre></div>`
+    },
+    {
+      dot:"k8s", label:"Verify everything is running", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal</span><button class="cbtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Pods running?</span>
+kubectl get pods -n devops-platform
+
+<span class="cm"># Service exists?</span>
+kubectl get svc -n devops-platform
+
+<span class="cm"># Ingress routing configured?</span>
+kubectl get ingress -n devops-platform
+
+<span class="cm"># HPA watching?</span>
+kubectl get hpa -n devops-platform
+
+<span class="cm"># ConfigMap created?</span>
+kubectl get configmap -n devops-platform
+
+<span class="cm"># Pod logs (replace pod name with actual)</span>
+kubectl logs -n devops-platform -l app.kubernetes.io/name=app -f
+
+<span class="cm"># Hit the /health endpoint through the ingress</span>
+curl http://&lt;ingress-external-ip&gt;/health \
+  -H "Host: app.devops-platform.com"
+</pre></div>`
+    },
+    {
+      dot:"helm", label:"How to deploy a new image version", badge:"concept", bt:"concept",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">this is your deploy command from now on</span><button class="cbtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># After GitHub Actions pushes a new image to ECR:</span>
+helm upgrade app helm/app \
+  --namespace devops-platform \
+  --set image.tag=&lt;new-git-sha&gt; \
+  --wait
+
+<span class="cm"># Kubernetes does a rolling update automatically —</span>
+<span class="cm"># no downtime, old pods stay up until new ones are healthy</span>
+
+<span class="cm"># Rollback if something goes wrong:</span>
+helm rollback app 1 -n devops-platform
+<span class="cm"># "1" is the revision number. helm history app shows all revisions.</span>
+</pre></div>`,
+      why:"<strong>Helm rollback is instant.</strong> It re-applies the previous rendered YAML — the cluster goes back to the previous Deployment spec, which triggers a rolling update back to the old image. This is why Helm tracks history. Without it, rollback means manually figuring out what the previous values were."
+    }
+  ]
+},
+
+// ── 8 ──────────────────────────────────────────────────────
+{
+  title: "Per-environment values files",
+  sub: "environments", eyebrow: "Step 8",
+  headline: "Staging vs Production overrides",
+  desc: "One chart, multiple environments. You never duplicate templates — you write override values files. This is the correct Helm multi-environment pattern.",
+  tags: ["helm","concept"],
+  tag: "helm",
+  chunks: [
+    {
+      dot:"helm", label:"Create values files per environment", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">helm/app/values.staging.yaml</span><button class="cbtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Only override what's different from values.yaml</span>
+replicaCount: 1
+
+ingress:
+  host: staging.devops-platform.com
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 200m
+    memory: 256Mi
+
+autoscaling:
+  enabled: false    <span class="cm"># no autoscaling in staging, save cost</span>
+</pre></div>
+<div class="cw"><div class="cbar"><span class="cfile">helm/app/values.prod.yaml</span><button class="cbtn" onclick="cp(this)">copy</button></div><pre>
+replicaCount: 3
+
+ingress:
+  host: app.devops-platform.com
+  tls: true
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+</pre></div>
+<div class="cw"><div class="cbar"><span class="cfile">deploy commands</span><button class="cbtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Staging deploy (base values + staging overrides)</span>
+helm upgrade --install app helm/app \
+  -f helm/app/values.yaml \
+  -f helm/app/values.staging.yaml \
+  --set image.tag=$GIT_SHA \
+  --namespace staging
+
+<span class="cm"># Production deploy</span>
+helm upgrade --install app helm/app \
+  -f helm/app/values.yaml \
+  -f helm/app/values.prod.yaml \
+  --set image.tag=$GIT_SHA \
+  --namespace prod
+</pre></div>`,
+      why:"Helm merges values files in order — later files override earlier ones. <code>values.yaml</code> has the defaults. <code>values.staging.yaml</code> overrides only what differs. This is DRY: you never repeat the full config per environment, only the differences. This is the pattern ArgoCD and most CD systems expect."
+    }
+  ]
+},
+
+// ── 9 ──────────────────────────────────────────────────────
+{
+  title: "Phase 3 complete",
+  sub: "summary & cv lines", eyebrow: "Phase 3 · Done",
+  headline: "What you built",
+  desc: "Phase 3 is complete. You have a real Kubernetes cluster running your app, a Helm chart you wrote from scratch, autoscaling, and a deploy workflow. Phase 4 is GitOps with ArgoCD.",
+  tags: ["concept"],
+  tag: "deep",
+  chunks: [
+    {
+      dot:"check", label:"Verification checklist", badge:"verify", bt:"run",
+      body:`<div class="chklist">
+<div class="chk-item"><span class="ci">✓</span>EKS cluster has nodes in Ready state (kubectl get nodes)</div>
+<div class="chk-item"><span class="ci">✓</span>Pods running in devops-platform namespace with correct image tag</div>
+<div class="chk-item"><span class="ci">✓</span>Service routes to pods (kubectl describe svc)</div>
+<div class="chk-item"><span class="ci">✓</span>Ingress has an external IP and routes to /health</div>
+<div class="chk-item"><span class="ci">✓</span>HPA created and shows current/target CPU metrics</div>
+<div class="chk-item"><span class="ci">✓</span>ConfigMap exists with correct env vars</div>
+<div class="chk-item"><span class="ci">✓</span>helm list shows release with STATUS=deployed</div>
+<div class="chk-item"><span class="ci">✓</span>helm rollback works — reverts to previous image</div>
+<div class="chk-item"><span class="ci">✓</span>helm template output looks correct (no blank values)</div>
+<div class="chk-item"><span class="ci">✓</span>Deploying new image tag causes rolling update with zero downtime</div>
+</div>`
+    },
+    {
+      dot:"check", label:"CV bullet points from Phase 3", badge:"cv lines", bt:"cv",
+      body:`<div class="chklist">
+<div class="chk-item"><span class="ci arrow">→</span>Provisioned AWS EKS cluster with Terraform (managed control plane, private node groups across 2 AZs)</div>
+<div class="chk-item"><span class="ci arrow">→</span>Authored Helm charts from scratch covering Deployment, Service, Ingress, HPA, and ConfigMap — with per-environment values override files</div>
+<div class="chk-item"><span class="ci arrow">→</span>Configured liveness and readiness probes with rolling update strategy for zero-downtime deployments</div>
+<div class="chk-item"><span class="ci arrow">→</span>Implemented HorizontalPodAutoscaler scaling pods 2→8 based on CPU utilisation targets</div>
+<div class="chk-item"><span class="ci arrow">→</span>Deployed NGINX Ingress Controller with single ALB entry point routing to multiple ClusterIP services</div>
+</div>`
+    },
+    {
+      dot:"concept", label:"What Phase 4 adds — GitOps with ArgoCD", badge:"next", bt:"concept",
+      body:`<div class="prose">Phase 4 takes the Helm chart you just wrote and hands deployment control to ArgoCD. Instead of running <code>helm upgrade</code> manually or in CI, you commit the image tag change to a Git repo and ArgoCD detects it, renders the chart, and applies the diff to the cluster automatically.<br><br>This is the GitOps model: <strong>Git is the single source of truth</strong> for cluster state. No kubectl, no helm commands in CI — the cluster self-heals to match what's in Git.<br><br>Tell me <strong>"next phase"</strong> when you're ready.</div>`
+    }
+  ]
+}
+
+];
+
+// ── STATE ──
+let cur = 0;
+const done = new Set();
+
+function renderNav() {
+  const tagMap = { helm:'helm', k8s:'k8s', tf:'tf', eks:'eks', deep:'deep', overview:'k8s' };
+  document.getElementById('nav-scroll').innerHTML = STEPS.map((s, i) => `
+    <div class="nav-item ${i===cur?'active':''} ${done.has(i)?'done':''}" onclick="jump(${i})">
+      <div class="n-num">${done.has(i)?'✓':i+1}</div>
+      <div class="n-text">
+        <div class="n-title">${s.title}</div>
+        <div class="n-sub">${s.sub}</div>
+      </div>
+      <div class="n-tag ${s.tag||'k8s'}">${s.tag||'k8s'}</div>
+    </div>
+  `).join('');
+
+  const pct = Math.round(done.size / STEPS.length * 100);
+  document.getElementById('prog-fill').style.width = pct + '%';
+  document.getElementById('prog-txt').textContent = `${done.size} / ${STEPS.length}`;
+}
+
+function renderMain() {
+  const s = STEPS[cur];
+  document.getElementById('main-head').innerHTML = `
+    <div class="eyebrow">${s.eyebrow}</div>
+    <div class="headline">${s.headline}</div>
+    <div class="step-desc">${s.desc}</div>
+    <div class="tag-row">${s.tags.map(t=>`<span class="tag ${t}">${t}</span>`).join('')}</div>
+  `;
+
+  document.getElementById('content').innerHTML = s.chunks.map((c, ci) => `
+    <div class="chunk ${ci===0?'open':''}" id="chunk-${ci}">
+      <div class="chunk-head" onclick="tog(${ci})">
+        <div class="c-dot ${c.dot}"></div>
+        <span class="c-label">${c.label}</span>
+        <span class="c-badge ${c.bt}">${c.badge}</span>
+        <span class="c-chev">▼</span>
+      </div>
+      <div class="chunk-body">
+        ${c.body}
+        ${c.why?`<div class="why"><div class="why-lbl">why this matters</div><p>${c.why}</p></div>`:''}
+      </div>
+    </div>
+  `).join('');
+
+  document.getElementById('step-lbl').textContent = `step ${cur+1} of ${STEPS.length}`;
+  document.getElementById('btn-prev').disabled = cur === 0;
+  document.getElementById('btn-next').textContent = cur === STEPS.length-1 ? '✓ done' : 'next →';
+}
+
+function tog(ci) {
+  document.getElementById(`chunk-${ci}`).classList.toggle('open');
+}
+
+function go(dir) {
+  if (dir===1 && cur < STEPS.length-1) { done.add(cur); cur++; }
+  else if (dir===-1 && cur > 0) cur--;
+  renderNav(); renderMain();
+  document.querySelector('.main').scrollTop = 0;
+}
+
+function jump(i) {
+  if (i < cur) done.delete(i);
+  cur = i; renderNav(); renderMain();
+}
+
+function cp(btn) {
+  const pre = btn.closest('.cw').querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText).then(() => {
+    btn.textContent = 'copied!'; btn.classList.add('ok');
+    setTimeout(() => { btn.textContent = 'copy'; btn.classList.remove('ok'); }, 2000);
+  });
+}
+
+renderNav(); renderMain();
+</script>
+</body>
+</html>

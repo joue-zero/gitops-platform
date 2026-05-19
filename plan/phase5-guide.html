@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phase 5 — Observability</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inconsolata:wght@300;400;500;600;700&family=Fraunces:wght@800;900&display=swap');
+
+:root {
+  --bg:     #060709;
+  --s1:     #090C11;
+  --s2:     #0D1219;
+  --s3:     #121820;
+  --border: #182030;
+  --bord2:  #22304A;
+  --text:   #B8CCE8;
+  --muted:  #2A3D58;
+  --dim:    #182030;
+  --prom:   #E6522C;   /* prometheus orange-red */
+  --graf:   #F46800;   /* grafana orange */
+  --loki:   #8AB4F8;   /* loki blue */
+  --alert:  #EF4444;   /* alertmanager red */
+  --green:  #22C55E;
+  --purple: #A855F7;
+  --cyan:   #06B6D4;
+  --yellow: #EAB308;
+  --acc:    #F97316;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Inconsolata', monospace; min-height: 100vh; }
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 2px; }
+
+.shell { display: grid; grid-template-columns: 272px 1fr; min-height: 100vh; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  background: var(--s1);
+  border-right: 1px solid var(--border);
+  position: sticky; top: 0; height: 100vh;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+
+.sb-head { padding: 22px 18px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+
+.phase-dot {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--prom); margin-bottom: 8px;
+}
+
+.phase-dot::before {
+  content: ''; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--prom); box-shadow: 0 0 8px var(--prom);
+}
+
+.sb-title { font-family: 'Fraunces', serif; font-size: 17px; font-weight: 900; color: #fff; line-height: 1.2; }
+
+.sb-pills { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+
+.pill {
+  font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 2px; border: 1px solid;
+}
+
+.pill.prom   { color: var(--prom);   border-color: #5A2010; background: #180804; }
+.pill.graf   { color: var(--graf);   border-color: #5A3000; background: #180C00; }
+.pill.loki   { color: var(--loki);   border-color: #1A3A6A; background: #04101E; }
+.pill.alert  { color: var(--alert);  border-color: #5A1010; background: #180404; }
+.pill.week   { color: var(--purple); border-color: #3A1A6A; background: #0E0420; }
+
+.prog-wrap { padding: 12px 18px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.prog-row { display: flex; justify-content: space-between; font-size: 9px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+.prog-track { height: 2px; background: var(--border); border-radius: 1px; }
+.prog-fill { height: 100%; background: linear-gradient(90deg, var(--prom), var(--graf)); border-radius: 1px; transition: width 0.4s; }
+
+.nav-scroll { flex: 1; overflow-y: auto; padding: 6px 0; }
+
+.nav-item {
+  display: flex; align-items: flex-start; gap: 9px;
+  padding: 8px 18px; cursor: pointer;
+  border-left: 2px solid transparent; transition: all 0.15s;
+}
+
+.nav-item:hover { background: var(--s2); }
+.nav-item.active { background: var(--s2); border-left-color: var(--prom); }
+.nav-item.done .nn { background: var(--green); color: #000; }
+
+.nn {
+  width: 18px; height: 18px; border-radius: 2px;
+  background: var(--dim); color: var(--muted);
+  font-size: 9px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-top: 1px; transition: all 0.2s;
+}
+
+.nav-item.active .nn { background: var(--prom); color: #fff; }
+.nt { flex: 1; min-width: 0; }
+.ntitle { font-size: 11px; font-weight: 500; color: var(--text); line-height: 1.35; }
+.nav-item.active .ntitle { color: #fff; }
+.nsub { font-size: 9px; color: var(--muted); margin-top: 1px; }
+
+.ntag {
+  font-size: 8px; padding: 1px 5px; border-radius: 1px;
+  letter-spacing: 0.04em; flex-shrink: 0; margin-top: 2px; align-self: flex-start;
+}
+
+.ntag.prom  { background: #180804; color: var(--prom); }
+.ntag.graf  { background: #180C00; color: var(--graf); }
+.ntag.loki  { background: #04101E; color: var(--loki); }
+.ntag.alert { background: #180404; color: var(--alert); }
+.ntag.deep  { background: #0E0420; color: var(--purple); }
+.ntag.all   { background: #0A1020; color: var(--cyan); }
+
+/* ── MAIN ── */
+.main { display: flex; flex-direction: column; min-height: 100vh; }
+
+.main-head { padding: 26px 36px 20px; border-bottom: 1px solid var(--border); background: var(--s1); flex-shrink: 0; }
+
+.eyebrow { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--prom); margin-bottom: 7px; }
+
+.headline { font-family: 'Fraunces', serif; font-size: 26px; font-weight: 900; color: #fff; line-height: 1.1; margin-bottom: 8px; }
+
+.step-desc { font-size: 12px; color: #3A5070; line-height: 1.9; max-width: 660px; }
+
+.tag-row { display: flex; gap: 5px; margin-top: 12px; flex-wrap: wrap; }
+
+.tag {
+  font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 2px; border: 1px solid;
+}
+
+.tag.prom    { color: var(--prom);   border-color: #5A2010; background: #180804; }
+.tag.graf    { color: var(--graf);   border-color: #5A3000; background: #180C00; }
+.tag.loki    { color: var(--loki);   border-color: #1A3A6A; background: #04101E; }
+.tag.alert   { color: var(--alert);  border-color: #5A1010; background: #180404; }
+.tag.concept { color: var(--purple); border-color: #3A1A6A; background: #0E0420; }
+.tag.bash    { color: #FDE68A;       border-color: #5A3A00; background: #180E00; }
+.tag.helm    { color: var(--cyan);   border-color: #0A3A4A; background: #021018; }
+
+/* ── CONTENT ── */
+.content { flex: 1; padding: 20px 36px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+
+/* ── CHUNK ── */
+.chunk { border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+
+.chunk-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 15px; cursor: pointer;
+  background: var(--s1); transition: background 0.15s; user-select: none;
+}
+
+.chunk-head:hover { background: var(--s2); }
+.chunk.open .chunk-head { background: var(--s2); border-bottom: 1px solid var(--border); }
+
+.cdot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.cdot.prom    { background: var(--prom); }
+.cdot.graf    { background: var(--graf); }
+.cdot.loki    { background: var(--loki); }
+.cdot.alert   { background: var(--alert); }
+.cdot.concept { background: var(--purple); }
+.cdot.bash    { background: var(--yellow); }
+.cdot.check   { background: var(--green); }
+.cdot.all     { background: var(--cyan); }
+.cdot.helm    { background: var(--cyan); }
+
+.clabel { flex: 1; font-size: 12px; font-weight: 500; color: #fff; line-height: 1.3; }
+
+.cbadge {
+  font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 2px 7px; border-radius: 2px;
+}
+
+.cbadge.do      { background: #04101E; color: #60A5FA; }
+.cbadge.run     { background: #021006; color: #4ADE80; }
+.cbadge.deep    { background: #0E0420; color: var(--purple); }
+.cbadge.concept { background: #0E0420; color: var(--purple); }
+.cbadge.warn    { background: #1A0404; color: #F87171; }
+.cbadge.cv      { background: #180804; color: var(--prom); }
+.cbadge.prom    { background: #180804; color: var(--prom); }
+.cbadge.graf    { background: #180C00; color: var(--graf); }
+.cbadge.loki    { background: #04101E; color: var(--loki); }
+.cbadge.alert   { background: #180404; color: var(--alert); }
+
+.cchev { font-size: 10px; color: var(--muted); transition: transform 0.2s; flex-shrink: 0; }
+.chunk.open .cchev { transform: rotate(180deg); }
+
+.chunk-body { display: none; padding: 18px; background: var(--bg); flex-direction: column; gap: 13px; }
+.chunk.open .chunk-body { display: flex; }
+
+/* ── CODE ── */
+.cw { background: var(--s1); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+
+.cbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 12px; background: var(--s2); border-bottom: 1px solid var(--border);
+}
+
+.cfile { font-size: 10px; color: var(--muted); letter-spacing: 0.05em; }
+
+.copybtn {
+  font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 2px 7px; border: 1px solid var(--bord2); border-radius: 2px;
+  background: transparent; color: var(--muted); cursor: pointer;
+  font-family: inherit; transition: all 0.15s;
+}
+
+.copybtn:hover { color: var(--text); border-color: var(--muted); }
+.copybtn.ok { color: var(--green); border-color: var(--green); }
+
+pre {
+  padding: 14px; overflow-x: auto;
+  font-size: 11.5px; line-height: 1.8;
+  color: var(--text); font-family: 'Inconsolata', monospace;
+}
+
+.cm { color: #1E2E42; font-style: italic; }
+.ck { color: #60A5FA; }
+.cv { color: #4ADE80; }
+.cs { color: #FCD34D; }
+.cf { color: #F87171; }
+.cp { color: #C084FC; }
+.co { color: var(--prom); }
+.cg { color: var(--green); }
+.cy { color: var(--yellow); }
+
+/* ── PROSE ── */
+.prose { font-size: 12px; color: #3A5070; line-height: 1.9; }
+.prose strong { color: var(--text); font-weight: 500; }
+.prose code { background: var(--s2); border: 1px solid var(--border); padding: 1px 5px; border-radius: 2px; font-size: 11px; color: var(--cyan); }
+.prose em { color: #5A7090; font-style: italic; }
+
+/* ── ANALOGY ── */
+.analogy { border: 1px solid var(--bord2); border-radius: 3px; overflow: hidden; }
+
+.analogy-head { background: var(--s3); padding: 7px 13px; font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+.analogy-head.prom  { color: var(--prom); }
+.analogy-head.graf  { color: var(--graf); }
+.analogy-head.loki  { color: var(--loki); }
+.analogy-head.alert { color: var(--alert); }
+
+.analogy-body { padding: 12px 14px; font-size: 12px; color: #3A5070; line-height: 1.9; background: #040608; }
+.analogy-body strong { color: #6A7090; font-weight: 500; }
+
+/* ── COMPARE TABLE ── */
+.cmp { border: 1px solid var(--border); border-radius: 3px; overflow: hidden; font-size: 11px; }
+.crow { display: grid; border-bottom: 1px solid var(--border); }
+.crow:last-child { border-bottom: none; }
+.crow.head { background: var(--s2); }
+.crow.c2 { grid-template-columns: 1fr 1fr; }
+.crow.c3 { grid-template-columns: 1fr 1fr 1fr; }
+.crow.c4 { grid-template-columns: 0.8fr 1fr 1fr 1fr; }
+.ccell { padding: 9px 12px; border-right: 1px solid var(--border); line-height: 1.6; color: #3A5070; }
+.ccell:last-child { border-right: none; }
+.crow.head .ccell { color: var(--muted); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; }
+.ccell.prom  { color: var(--prom); }
+.ccell.graf  { color: var(--graf); }
+.ccell.loki  { color: var(--loki); }
+.ccell.alert { color: var(--alert); }
+.ccell.hl    { color: var(--text); }
+
+/* ── WHY ── */
+.why { border-left: 2px solid var(--prom); padding: 11px 14px; background: #0C0402; border-radius: 0 3px 3px 0; }
+.why-lbl { font-size: 8px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--prom); margin-bottom: 5px; }
+.why p { font-size: 12px; color: #4A3020; line-height: 1.85; }
+.why p strong { color: #8A6040; font-weight: 500; }
+
+/* ── CALLOUT ── */
+.callout { border-radius: 3px; padding: 10px 13px; font-size: 12px; line-height: 1.75; display: flex; gap: 9px; align-items: flex-start; }
+.callout.info    { background: #030C16; border: 1px solid #0C2240; color: #60A5FA; }
+.callout.warn    { background: #120900; border: 1px solid #382200; color: #D4A017; }
+.callout.success { background: #020A06; border: 1px solid #082418; color: #4ADE80; }
+.callout.prom    { background: #0C0402; border: 1px solid #3A1808; color: var(--prom); }
+.callout.graf    { background: #0C0600; border: 1px solid #3A1E00; color: var(--graf); }
+.callout.loki    { background: #030C16; border: 1px solid #0C2240; color: var(--loki); }
+.cico { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+
+/* ── FTREE ── */
+.ftree { background: var(--s1); border: 1px solid var(--border); border-radius: 3px; padding: 12px 14px; font-size: 11.5px; line-height: 2; }
+.ftree .dir  { color: #fff; font-weight: 500; }
+.ftree .yml  { color: #60A5FA; }
+.ftree .new  { color: var(--dim); font-style: italic; font-size: 10px; }
+.ftree .pf   { color: var(--prom); }
+.ftree .gf   { color: var(--graf); }
+.ftree .lf   { color: var(--loki); }
+
+/* ── CHECKLIST ── */
+.chklist { display: flex; flex-direction: column; gap: 5px; }
+.chk { display: flex; align-items: flex-start; gap: 9px; font-size: 12px; color: #3A5070; line-height: 1.5; padding: 7px 12px; background: var(--s1); border: 1px solid var(--border); border-radius: 3px; }
+.chk .ci { color: var(--green); flex-shrink: 0; }
+.chk .ca { color: var(--prom); flex-shrink: 0; }
+
+/* ── STACK CARDS ── */
+.stack-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+.stack-card { border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+.stack-card-head { padding: 10px 14px; border-bottom: 1px solid var(--border); }
+.stack-card-head.prom  { background: #0C0402; border-left: 3px solid var(--prom); }
+.stack-card-head.graf  { background: #0C0600; border-left: 3px solid var(--graf); }
+.stack-card-head.loki  { background: #030C16; border-left: 3px solid var(--loki); }
+.stack-card-head.alert { background: #0C0202; border-left: 3px solid var(--alert); }
+.stack-card-title { font-size: 13px; font-weight: 600; color: #fff; }
+.stack-card-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+.stack-card-body { padding: 10px 14px; font-size: 11px; color: #3A5070; line-height: 1.75; background: var(--s1); }
+.stack-card-body strong { color: #6A7090; font-weight: 500; }
+
+/* ── BOT NAV ── */
+.bot-nav { padding: 14px 36px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); background: var(--s1); flex-shrink: 0; }
+
+.nbtn { display: flex; align-items: center; gap: 7px; font-family: 'Inconsolata', monospace; font-size: 11px; padding: 9px 18px; border: 1px solid var(--bord2); border-radius: 3px; background: transparent; color: var(--text); cursor: pointer; transition: all 0.15s; }
+.nbtn:hover { background: var(--s2); border-color: var(--muted); }
+.nbtn:disabled { opacity: 0.2; cursor: default; }
+.nbtn.primary { background: var(--prom); border-color: var(--prom); color: #fff; font-weight: 600; }
+.nbtn.primary:hover { background: #D44020; border-color: #D44020; }
+
+.step-lbl { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="sidebar">
+  <div class="sb-head">
+    <div class="phase-dot">Phase 5</div>
+    <div class="sb-title">Observability Stack</div>
+    <div class="sb-pills">
+      <span class="pill week">Week 7–8</span>
+      <span class="pill prom">Prometheus</span>
+      <span class="pill graf">Grafana</span>
+      <span class="pill loki">Loki</span>
+      <span class="pill alert">Alertmanager</span>
+    </div>
+  </div>
+  <div class="prog-wrap">
+    <div class="prog-row"><span>progress</span><span id="prog-txt">0 / 11</span></div>
+    <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+  </div>
+  <nav class="nav-scroll" id="nav-scroll"></nav>
+</aside>
+
+<div class="main">
+  <div class="main-head" id="main-head"></div>
+  <div class="content" id="content"></div>
+  <div class="bot-nav">
+    <button class="nbtn" id="btn-prev" onclick="go(-1)">← prev</button>
+    <span class="step-lbl" id="step-lbl"></span>
+    <button class="nbtn primary" id="btn-next" onclick="go(1)">next →</button>
+  </div>
+</div>
+
+</div>
+<script>
+const STEPS = [
+
+// ── 0 ─────────────────────────────────────────────────────
+{
+  title:"What Phase 5 builds", sub:"overview",
+  eyebrow:"Phase 5 · Overview", headline:"Observability Stack",
+  desc:"You have a running cluster with automated deployments. But right now if something breaks at 3am you have no idea what happened. Phase 5 fixes that. You will install the complete observability stack — metrics, dashboards, logs, and alerts — so you can answer any question about your system at any point in time.",
+  tags:["prom","graf","loki","alert"],
+  tag:"all",
+  chunks:[
+    {
+      dot:"concept", label:"The three pillars of observability", badge:"concept", bt:"concept",
+      body:`<div class="cmp">
+  <div class="crow c3 head">
+    <div class="ccell">Pillar</div>
+    <div class="ccell">Question it answers</div>
+    <div class="ccell">Tool</div>
+  </div>
+  <div class="crow c3">
+    <div class="ccell hl">Metrics</div>
+    <div class="ccell">What is my system doing right now and over time?</div>
+    <div class="ccell prom">Prometheus + Grafana</div>
+  </div>
+  <div class="crow c3">
+    <div class="ccell hl">Logs</div>
+    <div class="ccell">What exactly happened, in what order, in which service?</div>
+    <div class="ccell loki">Loki + Grafana</div>
+  </div>
+  <div class="crow c3">
+    <div class="ccell hl">Alerts</div>
+    <div class="ccell">When something breaks, who gets notified and how?</div>
+    <div class="ccell alert">Alertmanager + Slack</div>
+  </div>
+</div>
+<div class="callout info"><span class="cico">ℹ</span><div>Grafana is the UI for both metrics AND logs. Prometheus stores metrics. Loki stores logs. Grafana reads from both and displays them in the same dashboard — so you can correlate a spike in error rate with the logs from that exact moment.</div></div>`
+    },
+    {
+      dot:"all", label:"What you will have at the end — full observability in one command", badge:"overview", bt:"concept",
+      body:`<div class="ftree">
+devops-platform/
+└── helm/
+    └── <span class="dir">observability/</span>        <span class="new"># your observability values files</span>
+        ├── <span class="pf">prometheus-values.yaml</span>
+        ├── <span class="gf">grafana-values.yaml</span>
+        ├── <span class="lf">loki-values.yaml</span>
+        └── <span class="pf">alertmanager-rules.yaml</span>
+</div>
+<div class="cw"><div class="cbar"><span class="cfile">everything installs via one Helm chart</span></div><pre>
+<span class="cm"># kube-prometheus-stack = Prometheus + Grafana + Alertmanager + exporters</span>
+helm upgrade --install kube-prometheus-stack \
+  prometheus-community/kube-prometheus-stack \
+  -f helm/observability/prometheus-values.yaml \
+  --namespace monitoring
+
+<span class="cm"># Loki stack = Loki + Promtail (log collector)</span>
+helm upgrade --install loki \
+  grafana/loki-stack \
+  -f helm/observability/loki-values.yaml \
+  --namespace monitoring
+</pre></div>`
+    }
+  ]
+},
+
+// ── 1 ─────────────────────────────────────────────────────
+{
+  title:"Prometheus — deep dive", sub:"metrics engine",
+  eyebrow:"Step 1 — Deep Dive", headline:"Prometheus from first principles",
+  desc:"Prometheus is the industry-standard metrics system for Kubernetes. Understanding how it works — the pull model, the data model, and PromQL — is essential before you configure it or write alerts.",
+  tags:["prom","concept"],
+  tag:"deep",
+  chunks:[
+    {
+      dot:"prom", label:"What Prometheus is and what problem it solves", badge:"deep dive", bt:"deep",
+      body:`<div class="analogy">
+  <div class="analogy-head prom">Mental model — what Prometheus does</div>
+  <div class="analogy-body">
+    Imagine a health inspector who visits every restaurant in the city every 15 seconds, checks their temperature logs, portion sizes, and customer count, writes it all down, and keeps that data for 15 days. You can then ask: "what was the average customer count at Restaurant A between 2pm and 4pm last Tuesday?"<br><br>
+    <strong>Prometheus is that inspector.</strong> Every 15 seconds it visits every pod in your cluster, scrapes a <code>/metrics</code> HTTP endpoint, and stores the numbers in a time-series database. You can then query: "what was the 95th percentile response latency of the app service between 14:00 and 14:05 yesterday?"
+  </div>
+</div>`,
+      why:"The key word is <strong>pull-based</strong>. Prometheus reaches out to your services — your services don't push data to Prometheus. This means if a service crashes, Prometheus knows immediately because it stops getting data. Push-based systems can lose data silently when a service dies."
+    },
+    {
+      dot:"prom", label:"The Prometheus data model — time series and labels", badge:"deep dive", bt:"deep",
+      body:`<div class="prose">Every metric in Prometheus is a <strong>time series</strong> — a sequence of (timestamp, value) pairs. A metric is identified by its name and a set of key-value labels.</div>
+<div class="cw"><div class="cbar"><span class="cfile">metric structure</span></div><pre>
+<span class="cm"># metric name + labels = unique time series</span>
+http_requests_total{method="GET", status="200", pod="app-1"} 1847 @1705320000
+http_requests_total{method="GET", status="500", pod="app-1"} 12   @1705320000
+http_requests_total{method="POST", status="200", pod="app-2"} 423  @1705320000
+
+<span class="cm"># Labels are the dimensions. You can aggregate and filter by any label:</span>
+<span class="cm"># "total 500 errors across all pods" → filter by status="500", sum all pods</span>
+<span class="cm"># "GET requests only on app-1"       → filter method="GET", pod="app-1"</span>
+
+<span class="cm"># Four metric types:</span>
+Counter   → only goes up (requests total, errors total)
+Gauge     → can go up or down (memory usage, active connections)
+Histogram → buckets of observations (request duration distribution)
+Summary   → pre-computed percentiles (p50, p95, p99 latency)
+</pre></div>`,
+      why:"<strong>Labels are what make Prometheus powerful.</strong> One metric name like <code>http_requests_total</code> can represent thousands of time series via different label combinations. A Counter never decreases — to get the rate of requests per second you use <code>rate()</code> in PromQL which computes the per-second increase."
+    },
+    {
+      dot:"prom", label:"PromQL — the query language you need for alerts and dashboards", badge:"deep dive", bt:"deep",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">PromQL reference — queries you will actually use</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># ── Basic selectors ───────────────────────────────────────</span>
+http_requests_total                           <span class="cm"># all time series for this metric</span>
+http_requests_total{status="500"}             <span class="cm"># filter: 500 errors only</span>
+http_requests_total{status=~"5.."}            <span class="cm"># regex: all 5xx errors</span>
+http_requests_total{pod!="app-1"}             <span class="cm"># exclude app-1</span>
+
+<span class="cm"># ── Rate (requests per second over last 5 min) ────────────</span>
+rate(http_requests_total[5m])
+<span class="cm"># [5m] = look at 5 minutes of data to compute the per-second rate</span>
+<span class="cm"># ALWAYS use rate() on Counters, never the raw value</span>
+
+<span class="cm"># ── Aggregation ───────────────────────────────────────────</span>
+sum(rate(http_requests_total[5m]))            <span class="cm"># total RPS across all pods</span>
+sum by (status) (rate(http_requests_total[5m])) <span class="cm"># RPS grouped by status code</span>
+avg(container_memory_usage_bytes)             <span class="cm"># avg memory across all containers</span>
+
+<span class="cm"># ── Error rate (the most important alert metric) ──────────</span>
+sum(rate(http_requests_total{status=~"5.."}[5m]))
+  /
+sum(rate(http_requests_total[5m]))
+<span class="cm"># → fraction of requests that are errors (e.g. 0.02 = 2% error rate)</span>
+
+<span class="cm"># ── Latency percentile (p99) ──────────────────────────────</span>
+histogram_quantile(0.99,
+  sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+)
+<span class="cm"># → 99th percentile response time</span>
+
+<span class="cm"># ── Memory usage as percentage of limit ───────────────────</span>
+container_memory_usage_bytes
+  /
+container_spec_memory_limit_bytes * 100
+
+<span class="cm"># ── CPU throttling ────────────────────────────────────────</span>
+rate(container_cpu_cfs_throttled_seconds_total[5m])
+  /
+rate(container_cpu_cfs_periods_total[5m])
+</pre></div>`,
+      why:"<strong>The error rate formula is the one you will use in every alert.</strong> Dividing 5xx rate by total rate gives you a ratio between 0 and 1 that is stable regardless of traffic volume. A fixed threshold like 'alert if errors > 10/sec' is meaningless at low traffic. A ratio like 'alert if error rate > 1%' works at any scale."
+    },
+    {
+      dot:"prom", label:"How Prometheus discovers pods automatically in Kubernetes", badge:"deep dive", bt:"deep",
+      body:`<div class="prose">Prometheus doesn't need a static list of IPs to scrape. It uses <strong>Kubernetes service discovery</strong> — it watches the Kubernetes API for pods, services, and endpoints, and automatically discovers new targets as pods scale up or down.</div>
+<div class="cw"><div class="cbar"><span class="cfile">how auto-discovery works</span></div><pre>
+<span class="cm"># Prometheus finds pods with this annotation:</span>
+annotations:
+  prometheus.io/scrape: "true"
+  prometheus.io/port:   "8080"
+  prometheus.io/path:   "/metrics"
+
+<span class="cm"># In kube-prometheus-stack, ServiceMonitor CRD replaces annotations:</span>
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: app-monitor
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: app   <span class="cm"># scrape services with this label</span>
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+</pre></div>`,
+      why:"ServiceMonitors are the correct pattern in kube-prometheus-stack. They are CRDs (custom resource definitions) that Prometheus Operator reads — you define what to scrape declaratively in Kubernetes, and the operator configures Prometheus automatically. No manual prometheus.yml editing."
+    }
+  ]
+},
+
+// ── 2 ─────────────────────────────────────────────────────
+{
+  title:"Grafana — deep dive", sub:"visualisation",
+  eyebrow:"Step 2 — Deep Dive", headline:"Grafana from first principles",
+  desc:"Grafana is the UI where metrics and logs become visible. Understanding its structure — data sources, dashboards, panels, and variables — lets you build dashboards that actually answer questions instead of just showing graphs.",
+  tags:["graf","concept"],
+  tag:"deep",
+  chunks:[
+    {
+      dot:"graf", label:"What Grafana is — a query runner with a visual frontend", badge:"deep dive", bt:"deep",
+      body:`<div class="analogy">
+  <div class="analogy-head graf">Mental model</div>
+  <div class="analogy-body">
+    Grafana does not store any data. It is purely a query and visualisation layer. You configure <strong>data sources</strong> (Prometheus for metrics, Loki for logs), write queries in the data source's language (PromQL, LogQL), and Grafana renders the results as graphs, gauges, tables, or heatmaps.<br><br>
+    Think of Grafana as Excel's charting engine, but connected to live databases. The charts update automatically every N seconds. <strong>One Grafana instance can connect to many data sources simultaneously</strong> — you can put a PromQL graph and a Loki log stream on the same dashboard and they will time-sync when you zoom in.
+  </div>
+</div>`
+    },
+    {
+      dot:"graf", label:"Grafana concepts — data sources, dashboards, panels, variables", badge:"deep dive", bt:"deep",
+      body:`<div class="cmp">
+  <div class="crow c2 head">
+    <div class="ccell">Concept</div>
+    <div class="ccell">What it is</div>
+  </div>
+  <div class="crow c2">
+    <div class="ccell graf">Data Source</div>
+    <div class="ccell">A connection to a database. You configure Prometheus URL and Loki URL. Grafana queries them at render time.</div>
+  </div>
+  <div class="crow c2">
+    <div class="ccell graf">Dashboard</div>
+    <div class="ccell">A collection of panels arranged in a grid. Stored as JSON — can be version-controlled and shared.</div>
+  </div>
+  <div class="crow c2">
+    <div class="ccell graf">Panel</div>
+    <div class="ccell">One chart or table. Has a query (PromQL or LogQL), a visualisation type, and display options.</div>
+  </div>
+  <div class="crow c2">
+    <div class="ccell graf">Variable</div>
+    <div class="ccell">A dropdown filter on the dashboard. e.g. namespace=$namespace makes the entire dashboard filterable by namespace. The variable value is injected into every panel query.</div>
+  </div>
+  <div class="crow c2">
+    <div class="ccell graf">Alert</div>
+    <div class="ccell">A rule evaluated against a panel query. When the condition is met, Grafana fires to a contact point (Slack, PagerDuty, email).</div>
+  </div>
+</div>`,
+      why:"<strong>Dashboards as JSON</strong> is the key practice. Export your dashboard as JSON and commit it to your repo. Grafana can be configured to load dashboards from ConfigMaps (using the sidecar pattern in kube-prometheus-stack). This means your dashboards are version-controlled, reviewable, and reproduced automatically on a fresh cluster install."
+    },
+    {
+      dot:"graf", label:"The four dashboards you need to build", badge:"concept", bt:"concept",
+      body:`<div class="cmp">
+  <div class="crow c3 head">
+    <div class="ccell">Dashboard</div>
+    <div class="ccell">Key panels</div>
+    <div class="ccell">Source</div>
+  </div>
+  <div class="crow c3">
+    <div class="ccell graf">Cluster Overview</div>
+    <div class="ccell">Node CPU/memory, pod count, PVC usage</div>
+    <div class="ccell prom">Prometheus</div>
+  </div>
+  <div class="crow c3">
+    <div class="ccell graf">App Performance</div>
+    <div class="ccell">RPS, error rate, p50/p95/p99 latency</div>
+    <div class="ccell prom">Prometheus</div>
+  </div>
+  <div class="crow c3">
+    <div class="ccell graf">Pod Health</div>
+    <div class="ccell">Restarts, OOM kills, CPU throttling</div>
+    <div class="ccell prom">Prometheus</div>
+  </div>
+  <div class="crow c3">
+    <div class="ccell graf">Logs Explorer</div>
+    <div class="ccell">Live log stream filterable by pod, namespace, level</div>
+    <div class="ccell loki">Loki</div>
+  </div>
+</div>
+<div class="callout graf"><span class="cico">◈</span><div>kube-prometheus-stack ships with 20+ pre-built dashboards covering Kubernetes infrastructure. You import them and they work immediately. You only need to build the App Performance dashboard yourself — the rest are provided.</div></div>`
+    }
+  ]
+},
+
+// ── 3 ─────────────────────────────────────────────────────
+{
+  title:"Loki — deep dive", sub:"log aggregation",
+  eyebrow:"Step 3 — Deep Dive", headline:"Loki from first principles",
+  desc:"Loki is the logging system designed specifically for Kubernetes. Understanding how it differs from Elasticsearch and how LogQL works is what lets you actually find the log line that caused the outage.",
+  tags:["loki","concept"],
+  tag:"deep",
+  chunks:[
+    {
+      dot:"loki", label:"What Loki is and how it differs from Elasticsearch", badge:"deep dive", bt:"deep",
+      body:`<div class="analogy">
+  <div class="analogy-head loki">Mental model — Loki vs Elasticsearch</div>
+  <div class="analogy-body">
+    Elasticsearch (ELK stack) indexes every word in every log line. Searching is fast but storage is expensive and indexing is slow — a spike in log volume can overwhelm the indexer.<br><br>
+    <strong>Loki only indexes the labels</strong> (pod name, namespace, app) — not the log content itself. Log lines are stored compressed in chunks. When you search, Loki filters by label first (fast), then scans the compressed log content (like grep). This makes Loki much cheaper to run but slower on full-text search.<br><br>
+    For Kubernetes, <strong>Loki is the right choice</strong>. You almost always know which pod or namespace you're interested in — label filtering gets you 99% of the way there, and grep on the rest is fast enough.
+  </div>
+</div>`,
+      why:"Loki's storage cost is 10x lower than Elasticsearch for the same volume of logs. In a real company this matters — a busy cluster can generate gigabytes of logs per day. Loki stores them as compressed chunks in S3, which costs almost nothing."
+    },
+    {
+      dot:"loki", label:"How logs flow from pod to Loki — the Promtail agent", badge:"deep dive", bt:"deep",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">log collection pipeline</span></div><pre>
+Your app container
+  └── writes to stdout / stderr
+        │
+        ▼
+Kubernetes writes to node disk
+  /var/log/pods/namespace_podname_uid/container/*.log
+        │
+        ▼
+Promtail (DaemonSet — one pod per node)
+  ├── tails /var/log/pods/* on its node
+  ├── attaches labels: namespace, pod, container, app
+  └── ships to Loki
+        │
+        ▼
+Loki
+  ├── indexes labels only
+  ├── compresses and stores log chunks in S3
+  └── exposes LogQL query API
+        │
+        ▼
+Grafana reads via LogQL → displays in Logs panel
+</pre></div>`,
+      why:"<strong>Promtail runs as a DaemonSet</strong> — one pod per node, automatically. You don't configure your application to ship logs anywhere. You just write to stdout (which you should be doing anyway) and Promtail picks it up. This is the correct 12-factor app logging pattern."
+    },
+    {
+      dot:"loki", label:"LogQL — the query language for Loki logs", badge:"deep dive", bt:"deep",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">LogQL reference — queries you will actually use</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># ── Log stream selectors (label filters) ─────────────────</span>
+{namespace="devops-platform"}                 <span class="cm"># all logs in namespace</span>
+{namespace="devops-platform", app="app"}      <span class="cm"># specific app</span>
+{pod=~"app-.*"}                               <span class="cm"># regex: all app-* pods</span>
+
+<span class="cm"># ── Filter log content (like grep) ───────────────────────</span>
+{namespace="devops-platform"} |= "error"      <span class="cm"># lines containing "error"</span>
+{namespace="devops-platform"} != "health"     <span class="cm"># exclude health check logs</span>
+{namespace="devops-platform"} |~ "5[0-9]{2}" <span class="cm"># regex: 5xx status codes</span>
+
+<span class="cm"># ── Parse structured logs (JSON) ─────────────────────────</span>
+{namespace="devops-platform"}
+  | json                          <span class="cm"># parse each line as JSON</span>
+  | level="error"                 <span class="cm"># filter by parsed field</span>
+  | line_format "{{.message}}"    <span class="cm"># reformat output</span>
+
+<span class="cm"># ── Metric queries from logs ──────────────────────────────</span>
+<span class="cm"># Count error log lines per minute</span>
+sum(rate({namespace="devops-platform"} |= "error" [1m]))
+
+<span class="cm"># Count by pod (useful for finding the noisy pod)</span>
+sum by (pod) (
+  rate({namespace="devops-platform"} |= "error" [5m])
+)
+</pre></div>`,
+      why:"<strong>LogQL metric queries are extremely powerful.</strong> You can create Grafana alerts based on log content — e.g. 'alert if more than 10 lines containing FATAL appear per minute in the prod namespace.' This bridges the gap between logs and alerts without needing your app to expose custom metrics."
+    }
+  ]
+},
+
+// ── 4 ─────────────────────────────────────────────────────
+{
+  title:"Alertmanager — deep dive", sub:"alerting",
+  eyebrow:"Step 4 — Deep Dive", headline:"Alertmanager from first principles",
+  desc:"Prometheus evaluates alert rules and fires raw alerts. Alertmanager receives those raw alerts and decides who to notify, when, and how — with deduplication, grouping, and silencing built in.",
+  tags:["alert","concept"],
+  tag:"deep",
+  chunks:[
+    {
+      dot:"alert", label:"The alert pipeline — Prometheus rules → Alertmanager → Slack", badge:"deep dive", bt:"deep",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">how alerting works end to end</span></div><pre>
+<span class="cm"># Step 1: You define alert rules in Prometheus (PrometheusRule CRD)</span>
+alert: HighErrorRate
+expr: |
+  sum(rate(http_requests_total{status=~"5.."}[5m]))
+  / sum(rate(http_requests_total[5m])) > 0.01
+for: 5m          <span class="cm"># must be true for 5 min before firing</span>
+labels:
+  severity: critical
+
+<span class="cm"># Step 2: Prometheus evaluates this rule every 15s</span>
+<span class="cm"># If expression returns any result: alert is PENDING</span>
+<span class="cm"># After 5min still true: alert FIRES → sent to Alertmanager</span>
+
+<span class="cm"># Step 3: Alertmanager receives the alert and:</span>
+<span class="cm"># - Groups similar alerts (50 pod crashes → 1 notification)</span>
+<span class="cm"># - Deduplicates (same alert doesn't re-notify every 15s)</span>
+<span class="cm"># - Routes based on labels (critical → PagerDuty, warning → Slack)</span>
+<span class="cm"># - Silences (maintenance window: mute all alerts for 2hr)</span>
+
+<span class="cm"># Step 4: Notification sent to Slack / PagerDuty / email</span>
+</pre></div>`,
+      why:"The <code>for: 5m</code> field is critical. Without it, a single spike that lasts 30 seconds fires an alert — you get woken up at 3am for nothing. With <code>for: 5m</code>, Prometheus must see the condition continuously for 5 minutes before alerting. This eliminates most false positives."
+    },
+    {
+      dot:"alert", label:"Alertmanager concepts — routes, receivers, inhibition, silences", badge:"deep dive", bt:"deep",
+      body:`<div class="cmp">
+  <div class="crow c2 head">
+    <div class="ccell">Concept</div>
+    <div class="ccell">What it does</div>
+  </div>
+  <div class="crow c2">
+    <div class="ccell alert">Route</div>
+    <div class="ccell">A routing tree. Alerts match routes by label. Critical severity → PagerDuty. Warning severity → Slack. Default → email.</div>
+  </div>
+  <div class="crow c2">
+    <div class="ccell alert">Receiver</div>
+    <div class="ccell">A notification destination. Slack webhook, PagerDuty API key, SMTP server. Each route points to a receiver.</div>
+  </div>
+  <div class="crow c2">
+    <div class="ccell alert">Group by</div>
+    <div class="ccell">Combines multiple alerts into one notification. 'group_by: [alertname, namespace]' means one Slack message per alert type per namespace.</div>
+  </div>
+  <div class="crow c2">
+    <div class="ccell alert">Inhibition</div>
+    <div class="ccell">Suppress lower-severity alerts when a higher one fires. 'cluster down' inhibits all pod-level alerts — no point getting 50 pod alerts if the whole cluster is down.</div>
+  </div>
+  <div class="crow c2">
+    <div class="ccell alert">Silence</div>
+    <div class="ccell">Mute alerts matching a label set for a duration. Used during planned maintenance. Created via UI or CLI.</div>
+  </div>
+</div>`
+    }
+  ]
+},
+
+// ── 5 ─────────────────────────────────────────────────────
+{
+  title:"Install kube-prometheus-stack", sub:"installation",
+  eyebrow:"Step 5", headline:"Install Prometheus + Grafana + Alertmanager",
+  desc:"kube-prometheus-stack is a single Helm chart that installs Prometheus, Grafana, Alertmanager, node-exporter, kube-state-metrics, and Prometheus Operator — everything wired together and ready to scrape your cluster.",
+  tags:["prom","graf","alert","helm"],
+  tag:"prom",
+  chunks:[
+    {
+      dot:"prom", label:"prometheus-values.yaml — configure the stack", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">helm/observability/prometheus-values.yaml</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># ── Prometheus ────────────────────────────────────────────</span>
+prometheus:
+  prometheusSpec:
+    retention: 15d               <span class="cm"># keep 15 days of metrics</span>
+    retentionSize: 10GB
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: [ReadWriteOnce]
+          resources:
+            requests:
+              storage: 20Gi      <span class="cm"># persistent volume for metrics</span>
+
+    <span class="cm"># Scrape your app namespace automatically</span>
+    serviceMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelector: {}   <span class="cm"># watch ALL ServiceMonitors in cluster</span>
+    podMonitorSelector: {}
+
+<span class="cm"># ── Grafana ───────────────────────────────────────────────</span>
+grafana:
+  enabled: true
+  adminPassword: "changeme123"   <span class="cm"># change this, use a secret in prod</span>
+  persistence:
+    enabled: true
+    size: 5Gi
+
+  <span class="cm"># Load dashboards from ConfigMaps automatically</span>
+  sidecar:
+    dashboards:
+      enabled: true
+      searchNamespace: ALL
+
+  <span class="cm"># Pre-configure Loki as a data source</span>
+  additionalDataSources:
+    - name: Loki
+      type: loki
+      url: http://loki:3100
+      access: proxy
+
+<span class="cm"># ── Alertmanager ──────────────────────────────────────────</span>
+alertmanager:
+  enabled: true
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      group_by: [alertname, namespace]
+      group_wait: 30s            <span class="cm"># wait 30s for more alerts to group</span>
+      group_interval: 5m
+      repeat_interval: 4h        <span class="cm"># re-notify every 4h if still firing</span>
+      receiver: slack-warnings
+      routes:
+        - match:
+            severity: critical
+          receiver: slack-critical
+
+    receivers:
+      - name: slack-warnings
+        slack_configs:
+          - api_url: "YOUR_SLACK_WEBHOOK_URL"
+            channel: "#alerts-staging"
+            title: "{{ .GroupLabels.alertname }}"
+            text: "{{ range .Alerts }}{{ .Annotations.description }}{{ end }}"
+      - name: slack-critical
+        slack_configs:
+          - api_url: "YOUR_SLACK_WEBHOOK_URL"
+            channel: "#alerts-prod"
+            send_resolved: true
+
+<span class="cm"># ── Node Exporter (host metrics) ──────────────────────────</span>
+nodeExporter:
+  enabled: true
+
+<span class="cm"># ── Kube State Metrics (k8s object metrics) ───────────────</span>
+kubeStateMetrics:
+  enabled: true
+</pre></div>`,
+      why:"<strong>kube-state-metrics and node-exporter are critical additions.</strong> node-exporter collects host-level metrics (CPU, disk, network) from each node. kube-state-metrics converts Kubernetes object state (pod phase, deployment replicas, HPA status) into Prometheus metrics. Without these two, you have app metrics but no infrastructure context."
+    },
+    {
+      dot:"bash", label:"Install the stack", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Add Prometheus community Helm repo</span>
+helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+helm repo update
+
+<span class="cm"># Create monitoring namespace</span>
+kubectl create namespace monitoring
+
+<span class="cm"># Install kube-prometheus-stack</span>
+helm upgrade --install kube-prometheus-stack \
+  prometheus-community/kube-prometheus-stack \
+  --namespace monitoring \
+  -f helm/observability/prometheus-values.yaml \
+  --wait --timeout 10m
+
+<span class="cm"># Verify everything is running</span>
+kubectl get pods -n monitoring
+<span class="cm"># alertmanager-kube-prometheus-stack-alertmanager-0   Running
+# kube-prometheus-stack-grafana-xxx                    Running
+# kube-prometheus-stack-operator-xxx                   Running
+# kube-prometheus-stack-prometheus-0                   Running
+# kube-state-metrics-xxx                               Running
+# node-exporter-xxx (one per node)                     Running</span>
+
+<span class="cm"># Access Grafana locally</span>
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-grafana 3000:80
+<span class="cm"># Open http://localhost:3000 — user: admin / pass: changeme123</span>
+</pre></div>`
+    }
+  ]
+},
+
+// ── 6 ─────────────────────────────────────────────────────
+{
+  title:"Install Loki + Promtail", sub:"log aggregation",
+  eyebrow:"Step 6", headline:"Install Loki for log aggregation",
+  desc:"Loki collects logs from every pod in the cluster via Promtail agents. Once installed, every pod's stdout is searchable in Grafana without any application-level configuration.",
+  tags:["loki","helm"],
+  tag:"loki",
+  chunks:[
+    {
+      dot:"loki", label:"loki-values.yaml", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">helm/observability/loki-values.yaml</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+loki:
+  enabled: true
+  persistence:
+    enabled: true
+    size: 20Gi
+  config:
+    limits_config:
+      retention_period: 168h     <span class="cm"># 7 days of logs</span>
+      ingestion_rate_mb: 16
+      ingestion_burst_size_mb: 32
+
+promtail:
+  enabled: true
+  config:
+    clients:
+      - url: http://loki:3100/loki/api/v1/push
+
+    <span class="cm"># Add Kubernetes labels to every log line automatically</span>
+    scrape_configs:
+      - job_name: kubernetes-pods
+        kubernetes_sd_configs:
+          - role: pod
+        pipeline_stages:
+          - cri: {}              <span class="cm"># parse CRI log format</span>
+          - labeldrop:
+              - filename
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+          - source_labels: [__meta_kubernetes_pod_container_name]
+            target_label: container
+          - source_labels: [__meta_kubernetes_pod_label_app_kubernetes_io_name]
+            target_label: app
+</pre></div>`,
+      why:"The <code>relabel_configs</code> section is what attaches Kubernetes metadata to every log line. Without it, your logs in Loki would be anonymous chunks with no way to filter by pod or namespace. With it, every log line automatically gets <code>namespace=devops-platform</code>, <code>pod=app-xxx</code>, <code>app=app</code> — the same labels you see in kubectl."
+    },
+    {
+      dot:"bash", label:"Install Loki stack", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+helm repo add grafana https://grafana.github.io/helm-charts
+helm repo update
+
+helm upgrade --install loki grafana/loki-stack \
+  --namespace monitoring \
+  -f helm/observability/loki-values.yaml \
+  --wait
+
+<span class="cm"># Verify Promtail DaemonSet (one pod per node)</span>
+kubectl get daemonset -n monitoring loki-promtail
+<span class="cm"># NAME           DESIRED   CURRENT   READY
+# loki-promtail  2         2         2      ← one per node</span>
+
+<span class="cm"># Test: query logs from Grafana</span>
+<span class="cm"># Explore → Loki data source → {namespace="devops-platform"}</span>
+</pre></div>`
+    }
+  ]
+},
+
+// ── 7 ─────────────────────────────────────────────────────
+{
+  title:"Expose your app metrics to Prometheus", sub:"instrumentation",
+  eyebrow:"Step 7", headline:"App metrics + ServiceMonitor",
+  desc:"Prometheus can only scrape your app if your app exposes a /metrics endpoint and you create a ServiceMonitor telling Prometheus to look there. This step adds both.",
+  tags:["prom","bash"],
+  tag:"prom",
+  chunks:[
+    {
+      dot:"prom", label:"Add a /metrics endpoint to your Node app", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">app/index.js — add prom-client</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Install prom-client</span>
+npm install prom-client
+
+<span class="cm"># In index.js:</span>
+const promClient = require('prom-client');
+
+<span class="cm"># Collect default Node.js metrics (memory, GC, event loop)</span>
+promClient.collectDefaultMetrics({ prefix: 'app_' });
+
+<span class="cm"># Custom counter: HTTP requests per method/status/route</span>
+const httpRequests = new promClient.Counter({
+  name: 'http_requests_total',
+  help: 'Total HTTP requests',
+  labelNames: ['method', 'status', 'path'],
+});
+
+<span class="cm"># Custom histogram: request duration</span>
+const httpDuration = new promClient.Histogram({
+  name: 'http_request_duration_seconds',
+  help: 'HTTP request duration in seconds',
+  labelNames: ['method', 'path'],
+  buckets: [0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 2, 5],
+});
+
+<span class="cm"># Middleware: record every request</span>
+app.use((req, res, next) => {
+  const end = httpDuration.startTimer({ method: req.method, path: req.path });
+  res.on('finish', () => {
+    httpRequests.inc({ method: req.method, status: res.statusCode, path: req.path });
+    end();
+  });
+  next();
+});
+
+<span class="cm"># Expose /metrics endpoint for Prometheus</span>
+app.get('/metrics', async (req, res) => {
+  res.set('Content-Type', promClient.register.contentType);
+  res.end(await promClient.register.metrics());
+});
+</pre></div>`,
+      why:"<strong>The histogram buckets matter.</strong> Buckets define the resolution of your latency data. If your p99 latency is 800ms but your highest bucket is 0.5s, you lose the detail. Define buckets that cover your expected range with good granularity at the values you care about (usually 1ms–1s for web requests)."
+    },
+    {
+      dot:"prom", label:"Create a ServiceMonitor for your app", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">helm/app/templates/servicemonitor.yaml</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+{{- if .Values.metrics.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "app.fullname" . }}
+  namespace: monitoring       <span class="cm"># ServiceMonitor must be in monitoring namespace</span>
+  labels:
+    {{- include "app.labels" . | nindent 4 }}
+spec:
+  namespaceSelector:
+    matchNames:
+      - {{ .Release.Namespace }}   <span class="cm"># watch services in your app namespace</span>
+  selector:
+    matchLabels:
+      {{- include "app.selectorLabels" . | nindent 6 }}
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 15s
+{{- end }}
+</pre></div>
+<div class="cw"><div class="cbar"><span class="cfile">helm/app/values.yaml — add this</span></div><pre>
+metrics:
+  enabled: true
+</pre></div>`
+    }
+  ]
+},
+
+// ── 8 ─────────────────────────────────────────────────────
+{
+  title:"Write PrometheusRules — alert rules", sub:"alerting",
+  eyebrow:"Step 8", headline:"Write your alert rules",
+  desc:"Alert rules are PromQL expressions that fire when a threshold is crossed. You define them as PrometheusRule CRDs — Kubernetes objects that Prometheus Operator picks up automatically.",
+  tags:["prom","alert"],
+  tag:"alert",
+  chunks:[
+    {
+      dot:"alert", label:"alertmanager-rules.yaml — the essential alert rules", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">helm/observability/alertmanager-rules.yaml</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: app-alerts
+  namespace: monitoring
+  labels:
+    release: kube-prometheus-stack   <span class="cm"># must match Prometheus selector</span>
+spec:
+  groups:
+    - name: app.rules
+      interval: 30s
+      rules:
+
+        <span class="cm"># ── High error rate ──────────────────────────────────</span>
+        - alert: HighErrorRate
+          expr: |
+            sum(rate(http_requests_total{status=~"5.."}[5m]))
+            / sum(rate(http_requests_total[5m])) > 0.01
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "High error rate detected"
+            description: "Error rate is {{ humanizePercentage $value }} over the last 5 minutes"
+
+        <span class="cm"># ── High latency ─────────────────────────────────────</span>
+        - alert: HighLatency
+          expr: |
+            histogram_quantile(0.99,
+              sum(rate(http_request_duration_seconds_bucket[5m])) by (le)
+            ) > 1.0
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "p99 latency above 1 second"
+            description: "p99 latency is {{ humanizeDuration $value }}"
+
+        <span class="cm"># ── Pod crash looping ─────────────────────────────────</span>
+        - alert: PodCrashLooping
+          expr: |
+            rate(kube_pod_container_status_restarts_total[15m]) * 60 > 0
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Pod {{ $labels.pod }} is crash looping"
+            description: "Pod {{ $labels.namespace }}/{{ $labels.pod }} restarted {{ printf '%.0f' $value }} times in 15 min"
+
+        <span class="cm"># ── High memory usage ─────────────────────────────────</span>
+        - alert: HighMemoryUsage
+          expr: |
+            container_memory_usage_bytes
+            / container_spec_memory_limit_bytes > 0.85
+          for: 10m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Container {{ $labels.container }} memory above 85%"
+            description: "Memory usage is {{ humanizePercentage $value }} of limit"
+
+        <span class="cm"># ── Deployment not available ──────────────────────────</span>
+        - alert: DeploymentUnavailable
+          expr: |
+            kube_deployment_status_replicas_available
+            / kube_deployment_spec_replicas < 0.5
+          for: 5m
+          labels:
+            severity: critical
+          annotations:
+            summary: "Deployment {{ $labels.deployment }} has less than 50% replicas"
+
+        <span class="cm"># ── Node disk pressure ────────────────────────────────</span>
+        - alert: NodeDiskPressure
+          expr: |
+            (node_filesystem_avail_bytes / node_filesystem_size_bytes) < 0.1
+          for: 5m
+          labels:
+            severity: warning
+          annotations:
+            summary: "Node disk below 10%"
+            description: "Node {{ $labels.instance }} has {{ humanizePercentage $value }} disk remaining"
+</pre></div>`,
+      why:"<strong>Always use ratio-based thresholds, not absolute values.</strong> 'Alert if errors > 10/sec' is meaningless — at 10 RPS that's a 100% error rate, at 10,000 RPS that's 0.1%. 'Alert if error rate > 1%' works correctly at any traffic level."
+    },
+    {
+      dot:"bash", label:"Apply the rules and verify they loaded", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+kubectl apply -f helm/observability/alertmanager-rules.yaml
+
+<span class="cm"># Verify Prometheus picked them up</span>
+<span class="cm"># Port-forward to Prometheus UI</span>
+kubectl port-forward -n monitoring \
+  svc/kube-prometheus-stack-prometheus 9090:9090
+
+<span class="cm"># Open http://localhost:9090/alerts</span>
+<span class="cm"># You should see your rules listed as INACTIVE (no alerts firing)</span>
+
+<span class="cm"># Test a rule manually by querying the expression</span>
+<span class="cm"># http://localhost:9090/graph</span>
+<span class="cm"># Paste: rate(kube_pod_container_status_restarts_total[15m]) * 60</span>
+</pre></div>`
+    }
+  ]
+},
+
+// ── 9 ─────────────────────────────────────────────────────
+{
+  title:"Build the App Performance dashboard", sub:"grafana dashboard",
+  eyebrow:"Step 9", headline:"Build your Grafana dashboard",
+  desc:"The cluster overview dashboards come pre-built with kube-prometheus-stack. The one you need to build yourself is the App Performance dashboard — RPS, error rate, and latency for your specific application.",
+  tags:["graf","bash"],
+  tag:"graf",
+  chunks:[
+    {
+      dot:"graf", label:"Create the dashboard as a ConfigMap (GitOps pattern)", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">helm/observability/app-dashboard-configmap.yaml</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-performance-dashboard
+  namespace: monitoring
+  labels:
+    grafana_dashboard: "1"        <span class="cm"># Grafana sidecar picks up ConfigMaps with this label</span>
+data:
+  app-performance.json: |
+    {
+      "title": "App Performance",
+      "uid": "app-perf-001",
+      "time": { "from": "now-1h", "to": "now" },
+      "refresh": "30s",
+      "panels": [
+        {
+          "title": "Requests per second",
+          "type": "graph",
+          "gridPos": { "x": 0, "y": 0, "w": 8, "h": 8 },
+          "targets": [{
+            "expr": "sum(rate(http_requests_total[5m]))",
+            "legendFormat": "RPS"
+          }]
+        },
+        {
+          "title": "Error rate %",
+          "type": "graph",
+          "gridPos": { "x": 8, "y": 0, "w": 8, "h": 8 },
+          "targets": [{
+            "expr": "sum(rate(http_requests_total{status=~'5..'}[5m])) / sum(rate(http_requests_total[5m])) * 100",
+            "legendFormat": "Error %"
+          }]
+        },
+        {
+          "title": "p50 / p95 / p99 latency",
+          "type": "graph",
+          "gridPos": { "x": 16, "y": 0, "w": 8, "h": 8 },
+          "targets": [
+            {
+              "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+              "legendFormat": "p50"
+            },
+            {
+              "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+              "legendFormat": "p95"
+            },
+            {
+              "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))",
+              "legendFormat": "p99"
+            }
+          ]
+        }
+      ]
+    }
+</pre></div>`,
+      why:"Storing dashboards as ConfigMaps means they are version-controlled in Git, reviewable in PRs, and automatically provisioned on any fresh Grafana install. This is the production pattern — never build dashboards only in the UI, or you lose them when the pod restarts."
+    },
+    {
+      dot:"bash", label:"Import pre-built community dashboards", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">dashboard IDs to import in Grafana UI → Dashboards → Import</span></div><pre>
+<span class="cm"># Kubernetes Cluster Overview</span>
+Dashboard ID: 7249
+
+<span class="cm"># Pod resource usage (CPU, memory per pod)</span>
+Dashboard ID: 6417
+
+<span class="cm"># Node Exporter Full (host-level metrics)</span>
+Dashboard ID: 1860
+
+<span class="cm"># Nginx Ingress Controller</span>
+Dashboard ID: 9614
+
+<span class="cm"># How to import:</span>
+<span class="cm"># Grafana UI → Dashboards → Import → enter ID → Load → Import</span>
+</pre></div>`,
+      why:"These community dashboards are production-grade and maintained by the community. They use the exact metric names that kube-prometheus-stack produces. Import all four and you have complete cluster visibility in under 5 minutes."
+    }
+  ]
+},
+
+// ── 10 ────────────────────────────────────────────────────
+{
+  title:"Verify the observability stack", sub:"verification",
+  eyebrow:"Step 10", headline:"End-to-end verification",
+  desc:"Verify that metrics flow from app to Prometheus, logs flow from pods to Loki, dashboards render correctly, and alerts fire to Slack.",
+  tags:["bash","prom","graf","loki"],
+  tag:"all",
+  chunks:[
+    {
+      dot:"bash", label:"Verify metrics pipeline", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># 1. Check your app exposes /metrics</span>
+kubectl port-forward -n devops-platform svc/app 8080:80
+curl http://localhost:8080/metrics | head -20
+
+<span class="cm"># 2. Check ServiceMonitor is registered</span>
+kubectl get servicemonitor -n monitoring
+
+<span class="cm"># 3. Check Prometheus targets</span>
+<span class="cm"># http://localhost:9090/targets</span>
+<span class="cm"># Look for your app — should show State=UP</span>
+
+<span class="cm"># 4. Query your app metric in Prometheus</span>
+<span class="cm"># http://localhost:9090/graph</span>
+<span class="cm"># Query: http_requests_total</span>
+<span class="cm"># Should return time series with your pod labels</span>
+</pre></div>`
+    },
+    {
+      dot:"bash", label:"Verify log pipeline", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Generate some app traffic to create logs</span>
+kubectl run -it --rm busybox --image=busybox --restart=Never -- \
+  sh -c "for i in \$(seq 1 100); do wget -qO- http://app.devops-platform/health; done"
+
+<span class="cm"># In Grafana:</span>
+<span class="cm"># Explore → Select Loki data source</span>
+<span class="cm"># Query: {namespace="devops-platform"}</span>
+<span class="cm"># You should see log lines from your app pods</span>
+
+<span class="cm"># Verify Promtail is collecting from all nodes</span>
+kubectl logs -n monitoring -l app=promtail | grep "Started watching"
+</pre></div>`
+    },
+    {
+      dot:"bash", label:"Test an alert fires to Slack", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal — simulate high error rate</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Generate 500 errors to trigger the HighErrorRate alert</span>
+<span class="cm"># Add a test route to your app first:</span>
+app.get('/error-test', (req, res) => res.status(500).json({ error: 'test' }));
+
+<span class="cm"># Hit it repeatedly</span>
+for i in $(seq 1 1000); do
+  curl -s http://&lt;app-url&gt;/error-test &> /dev/null
+done
+
+<span class="cm"># Check Prometheus alert status</span>
+<span class="cm"># http://localhost:9090/alerts → HighErrorRate should show PENDING</span>
+<span class="cm"># After 5 minutes → FIRING</span>
+<span class="cm"># Check your Slack channel for the notification</span>
+
+<span class="cm"># Also test Alertmanager UI</span>
+kubectl port-forward -n monitoring svc/kube-prometheus-stack-alertmanager 9093:9093
+<span class="cm"># http://localhost:9093 → shows active alerts and silences</span>
+</pre></div>`
+    },
+    {
+      dot:"check", label:"Phase 5 verification checklist", badge:"verify", bt:"run",
+      body:`<div class="chklist">
+<div class="chk"><span class="ci">✓</span>All monitoring namespace pods Running</div>
+<div class="chk"><span class="ci">✓</span>Prometheus targets page shows your app as State=UP</div>
+<div class="chk"><span class="ci">✓</span>http_requests_total metric visible in Prometheus with correct pod labels</div>
+<div class="chk"><span class="ci">✓</span>Grafana loads — cluster overview and app performance dashboards render</div>
+<div class="chk"><span class="ci">✓</span>Loki Explore returns logs when querying {namespace="devops-platform"}</div>
+<div class="chk"><span class="ci">✓</span>Pod logs visible in Grafana with namespace, pod, container labels</div>
+<div class="chk"><span class="ci">✓</span>Alert rules visible in Prometheus /alerts page as INACTIVE</div>
+<div class="chk"><span class="ci">✓</span>Simulated error rate triggers HighErrorRate alert to FIRING after 5 min</div>
+<div class="chk"><span class="ci">✓</span>Slack notification received when alert fires</div>
+<div class="chk"><span class="ci">✓</span>Dashboard JSON committed to Git and auto-loaded by Grafana sidecar</div>
+</div>`
+    }
+  ]
+},
+
+// ── 11 ────────────────────────────────────────────────────
+{
+  title:"Phase 5 complete", sub:"summary & cv lines",
+  eyebrow:"Phase 5 · Done", headline:"What you built",
+  desc:"Phase 5 is complete. You can now answer any question about your system at any point in time. Phase 6 is DevSecOps — security scanning in your pipeline.",
+  tags:["concept"],
+  tag:"all",
+  chunks:[
+    {
+      dot:"check", label:"CV bullet points from Phase 5", badge:"cv lines", bt:"cv",
+      body:`<div class="chklist">
+<div class="chk"><span class="ca">→</span>Deployed full observability stack on Kubernetes: Prometheus (metrics), Grafana (dashboards), Loki (logs), Alertmanager (notifications) via Helm</div>
+<div class="chk"><span class="ca">→</span>Instrumented Node.js application with prom-client exposing custom HTTP request counters and latency histograms, scraped via ServiceMonitor CRD</div>
+<div class="chk"><span class="ca">→</span>Wrote 6 production alert rules in PromQL covering error rate, p99 latency, pod crash-looping, memory pressure, and node disk — routed to Slack by severity</div>
+<div class="chk"><span class="ca">→</span>Configured Loki log aggregation with Promtail DaemonSet, attaching Kubernetes metadata labels to all log lines, queryable via LogQL in Grafana</div>
+<div class="chk"><span class="ca">→</span>Provisioned Grafana dashboards as Kubernetes ConfigMaps for GitOps-compatible, version-controlled dashboard management</div>
+</div>`
+    },
+    {
+      dot:"concept", label:"What Phase 6 adds — DevSecOps", badge:"next", bt:"concept",
+      body:`<div class="prose">Phase 6 adds security gates throughout the pipeline. <strong>Trivy</strong> scans Docker images for CVEs before they reach ECR — if a CRITICAL vulnerability is found the push is blocked. <strong>Checkov</strong> scans your Terraform code for misconfigurations — open security groups, unencrypted buckets, public S3 access. <strong>SonarQube</strong> adds code quality analysis to the CI pipeline.<br><br>After Phase 6 you can tell an interviewer: <em>"our pipeline blocks deployment of any image with a CRITICAL CVE and any Terraform change with a HIGH severity misconfiguration."</em> That is what DevSecOps means in practice.<br><br>Tell me <strong>"next phase"</strong> when you're ready.</div>`
+    }
+  ]
+}
+
+];
+
+let cur = 0;
+const done = new Set();
+
+function renderNav() {
+  document.getElementById('nav-scroll').innerHTML = STEPS.map((s,i) => `
+    <div class="nav-item ${i===cur?'active':''} ${done.has(i)?'done':''}" onclick="jump(${i})">
+      <div class="nn">${done.has(i)?'✓':i+1}</div>
+      <div class="nt">
+        <div class="ntitle">${s.title}</div>
+        <div class="nsub">${s.sub}</div>
+      </div>
+      <div class="ntag ${s.tag}">${s.tag}</div>
+    </div>
+  `).join('');
+  const pct = Math.round(done.size/STEPS.length*100);
+  document.getElementById('prog-fill').style.width=pct+'%';
+  document.getElementById('prog-txt').textContent=`${done.size} / ${STEPS.length}`;
+}
+
+function renderMain() {
+  const s = STEPS[cur];
+  document.getElementById('main-head').innerHTML=`
+    <div class="eyebrow">${s.eyebrow}</div>
+    <div class="headline">${s.headline}</div>
+    <div class="step-desc">${s.desc}</div>
+    <div class="tag-row">${s.tags.map(t=>`<span class="tag ${t}">${t}</span>`).join('')}</div>
+  `;
+  document.getElementById('content').innerHTML=s.chunks.map((c,ci)=>`
+    <div class="chunk ${ci===0?'open':''}" id="c${ci}">
+      <div class="chunk-head" onclick="tog(${ci})">
+        <div class="cdot ${c.dot}"></div>
+        <span class="clabel">${c.label}</span>
+        <span class="cbadge ${c.bt}">${c.badge}</span>
+        <span class="cchev">▼</span>
+      </div>
+      <div class="chunk-body">
+        ${c.body}
+        ${c.why?`<div class="why"><div class="why-lbl">why this matters</div><p>${c.why}</p></div>`:''}
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('step-lbl').textContent=`step ${cur+1} of ${STEPS.length}`;
+  document.getElementById('btn-prev').disabled=cur===0;
+  document.getElementById('btn-next').textContent=cur===STEPS.length-1?'✓ done':'next →';
+}
+
+function tog(ci){document.getElementById(`c${ci}`).classList.toggle('open');}
+
+function go(dir){
+  if(dir===1&&cur<STEPS.length-1){done.add(cur);cur++;}
+  else if(dir===-1&&cur>0)cur--;
+  renderNav();renderMain();
+  document.querySelector('.main').scrollTop=0;
+}
+
+function jump(i){
+  if(i<cur)done.delete(i);
+  cur=i;renderNav();renderMain();
+}
+
+function cp(btn){
+  const pre=btn.closest('.cw').querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText).then(()=>{
+    btn.textContent='copied!';btn.classList.add('ok');
+    setTimeout(()=>{btn.textContent='copy';btn.classList.remove('ok');},2000);
+  });
+}
+
+renderNav();renderMain();
+</script>
+</body>
+</html>

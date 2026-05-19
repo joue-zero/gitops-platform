@@ -1,0 +1,19 @@
+plugin: amazon.aws.aws_ec2
+boto_profile: sofa
+regions:
+  - eu-central-1
+filters:
+  tag:Project: gitops-platform
+  instance-state-name: running
+
+keyed_groups:
+  - key: tags.Role
+    prefix: ""
+    separator: ""
+
+hostnames:
+  - private-ip-address        # use private IP as the inventory hostname
+
+compose:
+  # bastion gets its public IP, app servers get private IP
+  ansible_host: public_ip_address | default(private_ip_address, true)

@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phase 7 — Portfolio Polish</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Martian+Mono:wght@300;400;500;600;700&family=Cabinet+Grotesk:wght@800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@800;900&display=swap');
+
+:root {
+  --bg:    #060608;
+  --s1:    #09090E;
+  --s2:    #0D0D14;
+  --s3:    #12121C;
+  --border:#1A1A28;
+  --bord2: #252538;
+  --text:  #B8B8D8;
+  --muted: #282840;
+  --dim:   #181828;
+  --gold:  #F59E0B;
+  --gold2: #FCD34D;
+  --blue:  #3B82F6;
+  --green: #22C55E;
+  --pink:  #EC4899;
+  --cyan:  #06B6D4;
+  --purple:#A855F7;
+  --acc:   #F59E0B;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'Martian Mono', monospace; min-height: 100vh; }
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 2px; }
+
+.shell { display: grid; grid-template-columns: 272px 1fr; min-height: 100vh; }
+
+/* SIDEBAR */
+.sidebar { background: var(--s1); border-right: 1px solid var(--border); position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+.sb-head { padding: 22px 18px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.phase-dot { display: inline-flex; align-items: center; gap: 5px; font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gold2); margin-bottom: 8px; }
+.phase-dot::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--gold); box-shadow: 0 0 8px var(--gold); }
+.sb-title { font-family: 'DM Sans', sans-serif; font-size: 17px; font-weight: 900; color: #fff; line-height: 1.2; }
+.sb-pills { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+.pill { font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 2px; border: 1px solid; }
+.pill.doc   { color: var(--gold2); border-color: #4A3800; background: #120E00; }
+.pill.blog  { color: var(--pink);  border-color: #4A1830; background: #120408; }
+.pill.cv    { color: var(--cyan);  border-color: #0A3848; background: #020E14; }
+.pill.week  { color: var(--green); border-color: #0A3818; background: #020E06; }
+
+.prog-wrap { padding: 12px 18px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.prog-row { display: flex; justify-content: space-between; font-size: 9px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+.prog-track { height: 2px; background: var(--border); border-radius: 1px; }
+.prog-fill { height: 100%; background: linear-gradient(90deg, var(--gold), var(--gold2)); border-radius: 1px; transition: width 0.4s; }
+
+.nav-scroll { flex: 1; overflow-y: auto; padding: 6px 0; }
+.nav-item { display: flex; align-items: flex-start; gap: 9px; padding: 8px 18px; cursor: pointer; border-left: 2px solid transparent; transition: all 0.15s; }
+.nav-item:hover { background: var(--s2); }
+.nav-item.active { background: var(--s2); border-left-color: var(--gold); }
+.nav-item.done .nn { background: var(--green); color: #000; }
+.nn { width: 18px; height: 18px; border-radius: 2px; background: var(--dim); color: var(--muted); font-size: 9px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; transition: all 0.2s; }
+.nav-item.active .nn { background: var(--gold); color: #000; }
+.nt { flex: 1; min-width: 0; }
+.ntitle { font-size: 11px; font-weight: 500; color: var(--text); line-height: 1.35; }
+.nav-item.active .ntitle { color: #fff; }
+.nsub { font-size: 9px; color: var(--muted); margin-top: 1px; }
+.ntag { font-size: 8px; padding: 1px 5px; border-radius: 1px; letter-spacing: 0.04em; flex-shrink: 0; margin-top: 2px; align-self: flex-start; }
+.ntag.doc   { background: #120E00; color: var(--gold2); }
+.ntag.blog  { background: #120408; color: var(--pink); }
+.ntag.cv    { background: #020E14; color: var(--cyan); }
+.ntag.arch  { background: #0C0420; color: var(--purple); }
+.ntag.loom  { background: #020A04; color: var(--green); }
+.ntag.final { background: #0E0E18; color: var(--text); }
+
+/* MAIN */
+.main { display: flex; flex-direction: column; min-height: 100vh; }
+.main-head { padding: 26px 36px 20px; border-bottom: 1px solid var(--border); background: var(--s1); flex-shrink: 0; }
+.eyebrow { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--gold2); margin-bottom: 7px; }
+.headline { font-family: 'DM Sans', sans-serif; font-size: 26px; font-weight: 900; color: #fff; line-height: 1.1; margin-bottom: 8px; }
+.step-desc { font-size: 12px; color: #383858; line-height: 1.9; max-width: 660px; }
+.tag-row { display: flex; gap: 5px; margin-top: 12px; flex-wrap: wrap; }
+.tag { font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 7px; border-radius: 2px; border: 1px solid; }
+.tag.doc    { color: var(--gold2); border-color: #4A3800; background: #120E00; }
+.tag.arch   { color: var(--purple);border-color: #3A1870; background: #0C0420; }
+.tag.blog   { color: var(--pink);  border-color: #4A1830; background: #120408; }
+.tag.cv     { color: var(--cyan);  border-color: #0A3848; background: #020E14; }
+.tag.loom   { color: var(--green); border-color: #0A3818; background: #020E06; }
+.tag.concept{ color: var(--pink);  border-color: #4A1830; background: #120408; }
+
+/* CONTENT */
+.content { flex: 1; padding: 20px 36px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+
+/* CHUNK */
+.chunk { border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.chunk-head { display: flex; align-items: center; gap: 10px; padding: 12px 15px; cursor: pointer; background: var(--s1); transition: background 0.15s; user-select: none; }
+.chunk-head:hover { background: var(--s2); }
+.chunk.open .chunk-head { background: var(--s2); border-bottom: 1px solid var(--border); }
+.cdot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.cdot.doc    { background: var(--gold); }
+.cdot.arch   { background: var(--purple); }
+.cdot.blog   { background: var(--pink); }
+.cdot.cv     { background: var(--cyan); }
+.cdot.loom   { background: var(--green); }
+.cdot.concept{ background: var(--pink); }
+.cdot.check  { background: var(--green); }
+.cdot.warn   { background: #EF5350; }
+.clabel { flex: 1; font-size: 12px; font-weight: 500; color: #fff; line-height: 1.3; }
+.cbadge { font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 2px; }
+.cbadge.do     { background: #120E00; color: var(--gold2); }
+.cbadge.run    { background: #020E06; color: var(--green); }
+.cbadge.deep   { background: #120408; color: var(--pink); }
+.cbadge.concept{ background: #120408; color: var(--pink); }
+.cbadge.cv     { background: #020E14; color: var(--cyan); }
+.cbadge.arch   { background: #0C0420; color: var(--purple); }
+.cbadge.blog   { background: #120408; color: var(--pink); }
+.cbadge.loom   { background: #020E06; color: var(--green); }
+.cbadge.final  { background: #0E0E18; color: var(--text); }
+.cchev { font-size: 10px; color: var(--muted); transition: transform 0.2s; flex-shrink: 0; }
+.chunk.open .cchev { transform: rotate(180deg); }
+.chunk-body { display: none; padding: 18px; background: var(--bg); flex-direction: column; gap: 13px; }
+.chunk.open .chunk-body { display: flex; }
+
+/* CODE */
+.cw { background: var(--s1); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+.cbar { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; background: var(--s2); border-bottom: 1px solid var(--border); }
+.cfile { font-size: 10px; color: var(--muted); letter-spacing: 0.05em; }
+.copybtn { font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border: 1px solid var(--bord2); border-radius: 2px; background: transparent; color: var(--muted); cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.copybtn:hover { color: var(--text); border-color: var(--muted); }
+.copybtn.ok { color: var(--green); border-color: var(--green); }
+pre { padding: 14px; overflow-x: auto; font-size: 11.5px; line-height: 1.8; color: var(--text); font-family: 'Martian Mono', monospace; }
+.cm { color: #1E1E30; font-style: italic; }
+.ck { color: #60A5FA; }
+.cv { color: #4ADE80; }
+.cs { color: #FCD34D; }
+.cf { color: #F87171; }
+.cp { color: #C084FC; }
+.co { color: var(--gold); }
+
+/* PROSE */
+.prose { font-size: 12px; color: #383858; line-height: 1.9; }
+.prose strong { color: var(--text); font-weight: 500; }
+.prose code { background: var(--s2); border: 1px solid var(--border); padding: 1px 5px; border-radius: 2px; font-size: 11px; color: var(--gold2); }
+.prose em { color: #505070; font-style: italic; }
+
+/* ANALOGY */
+.analogy { border: 1px solid var(--bord2); border-radius: 3px; overflow: hidden; }
+.analogy-head { background: var(--s3); padding: 7px 13px; font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+.analogy-head.gold  { color: var(--gold2); }
+.analogy-head.blog  { color: var(--pink); }
+.analogy-head.arch  { color: var(--purple); }
+.analogy-body { padding: 12px 14px; font-size: 12px; color: #383858; line-height: 1.9; background: #040406; }
+.analogy-body strong { color: #686878; font-weight: 500; }
+
+/* SECTION BLOCK */
+.section { border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+.section-head { padding: 8px 14px; background: var(--s2); border-bottom: 1px solid var(--border); font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; }
+.section-head.gold   { color: var(--gold2); }
+.section-head.blue   { color: var(--blue); }
+.section-head.green  { color: var(--green); }
+.section-head.purple { color: var(--purple); }
+.section-head.pink   { color: var(--pink); }
+.section-body { padding: 12px 14px; font-size: 12px; color: #383858; line-height: 1.9; background: var(--bg); }
+.section-body strong { color: #686878; font-weight: 500; }
+.section-body code { background: var(--s2); border: 1px solid var(--border); padding: 1px 5px; border-radius: 2px; font-size: 11px; color: var(--gold2); }
+
+/* WHY */
+.why { border-left: 2px solid var(--gold); padding: 11px 14px; background: #080600; border-radius: 0 3px 3px 0; }
+.why-lbl { font-size: 8px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--gold2); margin-bottom: 5px; }
+.why p { font-size: 12px; color: #403010; line-height: 1.85; }
+.why p strong { color: #806020; font-weight: 500; }
+
+/* CALLOUT */
+.callout { border-radius: 3px; padding: 10px 13px; font-size: 12px; line-height: 1.75; display: flex; gap: 9px; align-items: flex-start; }
+.callout.gold    { background: #080600; border: 1px solid #302000; color: var(--gold2); }
+.callout.info    { background: #030810; border: 1px solid #0C1A40; color: #60A5FA; }
+.callout.blog    { background: #0A0408; border: 1px solid #2A0818; color: var(--pink); }
+.callout.success { background: #020806; border: 1px solid #082018; color: #4ADE80; }
+.cico { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+
+/* CHECKLIST */
+.chklist { display: flex; flex-direction: column; gap: 5px; }
+.chk { display: flex; align-items: flex-start; gap: 9px; font-size: 12px; color: #383858; line-height: 1.5; padding: 7px 12px; background: var(--s1); border: 1px solid var(--border); border-radius: 3px; }
+.chk .ci { color: var(--green); flex-shrink: 0; }
+.chk .ca { color: var(--gold2); flex-shrink: 0; }
+
+/* README STRUCTURE */
+.readme-block { border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+.rb-section { border-bottom: 1px solid var(--border); }
+.rb-section:last-child { border-bottom: none; }
+.rb-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--s2); border-bottom: 1px solid var(--border); }
+.rb-num { width: 20px; height: 20px; border-radius: 2px; background: var(--gold); color: #000; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.rb-title { font-size: 12px; font-weight: 500; color: #fff; }
+.rb-why { font-size: 10px; color: var(--muted); margin-left: auto; }
+.rb-body { padding: 10px 14px; font-size: 11.5px; color: #383858; line-height: 1.75; background: var(--bg); }
+.rb-body code { background: var(--s2); border: 1px solid var(--border); padding: 1px 5px; border-radius: 2px; font-size: 10px; color: var(--gold2); }
+
+/* BLOG OUTLINE */
+.blog-section { border-left: 2px solid var(--pink); padding: 10px 14px; background: #060208; border-radius: 0 3px 3px 0; margin-bottom: 8px; }
+.blog-section-title { font-size: 10px; color: var(--pink); letter-spacing: 0.12em; text-transform: uppercase; margin-bottom: 5px; }
+.blog-section-body { font-size: 12px; color: #403050; line-height: 1.8; }
+.blog-section-body strong { color: #706080; font-weight: 500; }
+
+/* LOOM TIMELINE */
+.loom-row { display: flex; gap: 10px; padding: 8px 0; border-bottom: 1px solid var(--border); align-items: flex-start; }
+.loom-row:last-child { border-bottom: none; }
+.loom-time { font-size: 10px; color: var(--green); width: 48px; flex-shrink: 0; margin-top: 1px; }
+.loom-content { font-size: 12px; color: #383858; line-height: 1.6; flex: 1; }
+.loom-content strong { color: var(--text); font-weight: 500; }
+
+/* CV FINAL TABLE */
+.cv-table { border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+.cv-row { display: grid; grid-template-columns: 80px 1fr; border-bottom: 1px solid var(--border); }
+.cv-row:last-child { border-bottom: none; }
+.cv-row.head { background: var(--s2); }
+.cv-phase { padding: 9px 12px; border-right: 1px solid var(--border); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold2); display: flex; align-items: center; }
+.cv-line { padding: 9px 12px; font-size: 11px; color: #383858; line-height: 1.6; background: var(--bg); }
+.cv-line em { color: #505070; font-style: italic; }
+
+/* BOT NAV */
+.bot-nav { padding: 14px 36px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); background: var(--s1); flex-shrink: 0; }
+.nbtn { display: flex; align-items: center; gap: 7px; font-family: 'Martian Mono', monospace; font-size: 11px; padding: 9px 18px; border: 1px solid var(--bord2); border-radius: 3px; background: transparent; color: var(--text); cursor: pointer; transition: all 0.15s; }
+.nbtn:hover { background: var(--s2); border-color: var(--muted); }
+.nbtn:disabled { opacity: 0.2; cursor: default; }
+.nbtn.primary { background: var(--gold); border-color: var(--gold); color: #000; font-weight: 700; }
+.nbtn.primary:hover { background: var(--gold2); border-color: var(--gold2); }
+.step-lbl { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="sidebar">
+  <div class="sb-head">
+    <div class="phase-dot">Phase 7 · Final</div>
+    <div class="sb-title">Portfolio Polish</div>
+    <div class="sb-pills">
+      <span class="pill week">Week 11–12</span>
+      <span class="pill doc">Docs</span>
+      <span class="pill blog">Blog</span>
+      <span class="pill cv">CV</span>
+    </div>
+  </div>
+  <div class="prog-wrap">
+    <div class="prog-row"><span>progress</span><span id="prog-txt">0 / 8</span></div>
+    <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+  </div>
+  <nav class="nav-scroll" id="nav-scroll"></nav>
+</aside>
+
+<div class="main">
+  <div class="main-head" id="main-head"></div>
+  <div class="content" id="content"></div>
+  <div class="bot-nav">
+    <button class="nbtn" id="btn-prev" onclick="go(-1)">← prev</button>
+    <span class="step-lbl" id="step-lbl"></span>
+    <button class="nbtn primary" id="btn-next" onclick="go(1)">next →</button>
+  </div>
+</div>
+
+</div>
+<script>
+const STEPS = [
+
+// ── 0 ─────────────────────────────────────────────────────
+{
+  title:"Why Phase 7 exists", sub:"overview",
+  eyebrow:"Phase 7 · Overview", headline:"Portfolio Polish",
+  desc:"You have built a production-grade DevOps platform across 6 phases. Phase 7 does not add new technology. It makes everything you built legible to a hiring manager in 5 minutes, to a technical interviewer in 30 minutes, and to the internet forever via a blog post. Presentation is not vanity — it is how you convert 12 weeks of work into offers.",
+  tags:["doc","arch","blog","cv","loom"],
+  tag:"final",
+  chunks:[
+    {
+      dot:"concept", label:"What Phase 7 produces — the five deliverables", badge:"overview", bt:"concept",
+      body:`<div class="chklist">
+<div class="chk"><span class="ca">1</span><strong style="color:var(--text)">Architecture diagram</strong> — one image that shows the entire system. Hiring managers look at this first. It must be readable in 30 seconds.</div>
+<div class="chk"><span class="ca">2</span><strong style="color:var(--text)">README</strong> — structured like a technical proposal. Problem → architecture → security → how to deploy. Engineers read this during interviews.</div>
+<div class="chk"><span class="ca">3</span><strong style="color:var(--text)">Cost estimate</strong> — shows business awareness. Senior DevOps engineers think about cost. Juniors do not.</div>
+<div class="chk"><span class="ca">4</span><strong style="color:var(--text)">Loom walkthrough</strong> — 3 min live demo video. Proves it actually runs. Hiring managers watch this while reviewing your CV.</div>
+<div class="chk"><span class="ca">5</span><strong style="color:var(--text)">Technical blog post</strong> — the most underrated asset. Shows communication skill. Gets you discovered. Signals you can think, not just execute.</div>
+</div>`
+    },
+    {
+      dot:"concept", label:"The hiring manager's 5-minute review — what they actually look at", badge:"concept", bt:"concept",
+      body:`<div class="analogy">
+  <div class="analogy-head gold">What happens when your CV lands on a desk</div>
+  <div class="analogy-body">
+    A hiring manager opens your GitHub profile. They have 5 minutes. Here is exactly what they look at and in what order:<br><br>
+    <strong>1.</strong> README header — does the project title tell them what it is immediately?<br>
+    <strong>2.</strong> Architecture diagram — can they understand the system in 30 seconds?<br>
+    <strong>3.</strong> Tech stack badges — do the right tools appear?<br>
+    <strong>4.</strong> README structure — does it look professional or like a personal notebook?<br>
+    <strong>5.</strong> Last commit date — is it recent? Is the author still active?<br>
+    <strong>6.</strong> If interested: Loom video — does it actually work?<br><br>
+    They do NOT read your code in the first pass. They read the documentation first. Documentation is the interface to your code.
+  </div>
+</div>`,
+      why:"Most engineers build the project and write a 3-line README. The documentation is the difference between a portfolio project and a portfolio project that gets you interviews. <strong>Spend as much time on Phase 7 as on any technical phase.</strong>"
+    }
+  ]
+},
+
+// ── 1 ─────────────────────────────────────────────────────
+{
+  title:"Architecture diagram", sub:"visual design",
+  eyebrow:"Step 1", headline:"Draw the architecture diagram",
+  desc:"One diagram that communicates the entire system to a technical reader in 30 seconds. Every component visible. Traffic flows shown. Security boundaries clear. This is the first thing an interviewer asks you to walk through.",
+  tags:["arch","doc"],
+  tag:"arch",
+  chunks:[
+    {
+      dot:"arch", label:"What the diagram must show — the checklist", badge:"arch", bt:"arch",
+      body:`<div class="chklist">
+<div class="chk"><span class="ci">✓</span>AWS region boundary and VPC boundary clearly labelled</div>
+<div class="chk"><span class="ci">✓</span>Three subnet tiers (public / private / data) with CIDR blocks</div>
+<div class="chk"><span class="ci">✓</span>All EC2 instances, EKS nodes, RDS, ALB, NAT Gateway, Bastion</div>
+<div class="chk"><span class="ci">✓</span>Traffic flow arrows: internet → ALB → EKS pods → RDS</div>
+<div class="chk"><span class="ci">✓</span>CI/CD flow: GitHub Actions → ECR → ArgoCD → EKS</div>
+<div class="chk"><span class="ci">✓</span>Observability stack: Prometheus scraping pods, Loki collecting logs, Grafana reading both</div>
+<div class="chk"><span class="ci">✓</span>Security gates labelled: Trivy, Checkov, SonarQube at their positions in the pipeline</div>
+<div class="chk"><span class="ci">✓</span>AWS managed services in their own column: S3, DynamoDB, ECR, IAM, Secrets Manager</div>
+<div class="chk"><span class="ci">✓</span>Ansible SSH path: laptop → bastion → private EC2s</div>
+</div>`
+    },
+    {
+      dot:"arch", label:"Tool recommendation — draw.io / diagrams.net", badge:"do this", bt:"do",
+      body:`<div class="prose">Use <strong>diagrams.net</strong> (formerly draw.io). It is free, works in the browser, exports to PNG/SVG, and has AWS shape libraries built in.</div>
+<div class="cw"><div class="cbar"><span class="cfile">setup</span></div><pre>
+1. Go to app.diagrams.net
+2. Create new diagram → select "AWS 19" template as starting point
+3. Enable AWS shape library: Extras → Edit Diagram → or via left panel
+
+<span class="cm"># Export settings for README:</span>
+File → Export as → PNG
+  Scale: 2x (for retina displays)
+  Background: white or transparent
+
+<span class="cm"># Save the .drawio source file in your repo too:</span>
+docs/
+  architecture.drawio   ← editable source
+  architecture.png      ← rendered image (linked in README)
+</pre></div>`,
+      why:"Saving the .drawio source file in the repo is a professional signal. It means someone can open the diagram, modify it for their context, and understand the system. A PNG alone is a dead artifact. The source file shows you think in systems."
+    },
+    {
+      dot:"arch", label:"Diagram layout — where to place each element", badge:"arch", bt:"arch",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">diagram layout guide</span></div><pre>
+LEFT COLUMN: CI/CD + GitOps
+  Developer laptop
+    ↓ git push
+  GitHub (app repo)
+    ↓ GitHub Actions
+  ECR (image store)
+    ↓
+  gitops-config repo
+    ↓ ArgoCD watches
+  [arrow into cluster]
+
+CENTRE: AWS infrastructure (main focus)
+  ┌─ VPC ─────────────────────────────┐
+  │  ┌─ Public subnets ─────────────┐ │
+  │  │  ALB    NAT GW    Bastion    │ │
+  │  └──────────────────────────────┘ │
+  │  ┌─ Private subnets ────────────┐ │
+  │  │  EKS worker nodes            │ │
+  │  │  (Pods: app, ArgoCD,         │ │
+  │  │   Prometheus, Grafana, Loki) │ │
+  │  └──────────────────────────────┘ │
+  │  ┌─ Data subnets ───────────────┐ │
+  │  │  RDS Postgres   Redis        │ │
+  │  └──────────────────────────────┘ │
+  └───────────────────────────────────┘
+
+RIGHT COLUMN: AWS Managed Services
+  S3 (state + assets)
+  DynamoDB (TF lock)
+  IAM (roles + OIDC)
+  Secrets Manager
+  Route53 + ACM
+  CloudWatch
+
+BOTTOM: Security pipeline
+  SonarQube → Trivy FS → Build → Trivy Image → Checkov → Apply
+</pre></div>`
+    }
+  ]
+},
+
+// ── 2 ─────────────────────────────────────────────────────
+{
+  title:"The README", sub:"documentation",
+  eyebrow:"Step 2", headline:"Write the README",
+  desc:"The README is not a description of what you built. It is a technical proposal that communicates the problem, the solution, and how to use it. Every section has a specific job. Read each one before writing.",
+  tags:["doc"],
+  tag:"doc",
+  chunks:[
+    {
+      dot:"doc", label:"README structure — every section with its purpose", badge:"write this", bt:"do",
+      body:`<div class="readme-block">
+  <div class="rb-section">
+    <div class="rb-head"><div class="rb-num">1</div><div class="rb-title">Header — project name + one-line description + badges</div><div class="rb-why">first thing seen</div></div>
+    <div class="rb-body">A sharp title and one sentence that describes what it is. Followed by badges (CI status, Terraform version, k8s version). Badges show the project is alive and passing.<br><br>
+    <code># Production GitOps Platform on AWS</code><br>
+    <code>A fully automated DevOps platform: EKS + Helm + ArgoCD + Prometheus + DevSecOps pipeline</code><br><br>
+    Badge shields: ![CI](https://github.com/.../actions/workflows/ci.yml/badge.svg) ![Terraform](https://img.shields.io/badge/terraform-1.7-purple)</div>
+  </div>
+  <div class="rb-section">
+    <div class="rb-head"><div class="rb-num">2</div><div class="rb-title">Architecture diagram — the image, inline</div><div class="rb-why">second thing seen</div></div>
+    <div class="rb-body"><code>![Architecture](docs/architecture.png)</code><br><br>Put this immediately after the badges. No text before it. The diagram should be self-explanatory.</div>
+  </div>
+  <div class="rb-section">
+    <div class="rb-head"><div class="rb-num">3</div><div class="rb-title">Tech stack — brief table</div><div class="rb-why">scanning keywords</div></div>
+    <div class="rb-body">A two-column table: Tool | Purpose. One line per tool. This is what ATS systems and quick-scanners look at. Keep it dense — no paragraphs.</div>
+  </div>
+  <div class="rb-section">
+    <div class="rb-head"><div class="rb-num">4</div><div class="rb-title">Features — bullet list of capabilities</div><div class="rb-why">shows scope</div></div>
+    <div class="rb-body">Not a list of tools. A list of what the system CAN DO. "Zero-downtime rolling deploys via Helm + ArgoCD". "Automatic rollback via git revert". "CVE blocking before ECR push". Write for a hiring manager who wants to know what problems you can solve.</div>
+  </div>
+  <div class="rb-section">
+    <div class="rb-head"><div class="rb-num">5</div><div class="rb-title">Project structure — annotated file tree</div><div class="rb-why">shows organisation</div></div>
+    <div class="rb-body">The top-level folder layout with one-line comments on each directory. Engineers will jump to this to navigate the repo. Keep it shallow — no need to show every file.</div>
+  </div>
+  <div class="rb-section">
+    <div class="rb-head"><div class="rb-num">6</div><div class="rb-title">Prerequisites + Getting started</div><div class="rb-why">reproducibility</div></div>
+    <div class="rb-body">Exact versions of tools required (Terraform 1.7+, kubectl 1.29+, Helm 3.14+, AWS CLI 2.x). Step-by-step commands to deploy from scratch. Someone should be able to clone the repo and follow these steps to get a running system.</div>
+  </div>
+  <div class="rb-section">
+    <div class="rb-head"><div class="rb-num">7</div><div class="rb-title">CI/CD pipeline — flow diagram in text</div><div class="rb-why">shows understanding</div></div>
+    <div class="rb-body">A short ASCII flow or description of what happens on git push. "Push → test → Trivy scan → build → push ECR → update gitops repo → ArgoCD syncs → rolling update". This shows you understand the system end to end, not just individual tools.</div>
+  </div>
+  <div class="rb-section">
+    <div class="rb-head"><div class="rb-num">8</div><div class="rb-title">Security — what gates are in place</div><div class="rb-why">differentiates you</div></div>
+    <div class="rb-body">Most portfolio projects have zero security section. This section alone sets you apart. List: OIDC auth (no stored AWS keys), Trivy CVE blocking, Checkov IaC scanning, SonarQube quality gate, IAM least privilege, Secrets Manager, pre-commit secret detection.</div>
+  </div>
+  <div class="rb-section">
+    <div class="rb-head"><div class="rb-num">9</div><div class="rb-title">Observability — what you can see</div><div class="rb-why">shows operational maturity</div></div>
+    <div class="rb-body">List the dashboards, the alert rules, and the log pipeline. "Grafana dashboards: cluster overview, app performance (RPS, error rate, p50/p95/p99 latency). Loki: all pod logs searchable by namespace/pod/level. Alertmanager: 6 rules routing to Slack by severity."</div>
+  </div>
+  <div class="rb-section">
+    <div class="rb-head"><div class="rb-num">10</div><div class="rb-title">Cost estimate</div><div class="rb-why">business awareness</div></div>
+    <div class="rb-body">Approximate monthly AWS cost for this setup. Shows you think about money, not just technology. Senior engineers always think about cost.</div>
+  </div>
+</div>`
+    },
+    {
+      dot:"doc", label:"README template — copy and fill in", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">README.md — paste this and fill in your values</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+# Production GitOps Platform on AWS
+
+> A fully automated, production-grade DevOps platform built on AWS:
+> Kubernetes (EKS) · Helm · ArgoCD GitOps · Prometheus/Grafana/Loki
+> observability · Trivy/Checkov/SonarQube security pipeline
+
+![CI](https://github.com/YOUR_USERNAME/devops-platform/actions/workflows/ci.yml/badge.svg)
+![Terraform](https://img.shields.io/badge/Terraform-1.7-7B42BC)
+![Kubernetes](https://img.shields.io/badge/Kubernetes-1.29-326CE5)
+![ArgoCD](https://img.shields.io/badge/ArgoCD-2.10-EF7B4D)
+
+![Architecture](docs/architecture.png)
+
+## Tech Stack
+
+| Layer            | Tool                            |
+|------------------|---------------------------------|
+| Cloud            | AWS (EKS, ECR, RDS, ALB, S3)   |
+| IaC              | Terraform (modular, remote state)|
+| Config Mgmt      | Ansible (dynamic inventory)     |
+| Containers       | Docker multi-stage builds       |
+| Orchestration    | Kubernetes (EKS)                |
+| Package Mgmt     | Helm charts                     |
+| GitOps CD        | ArgoCD (App of Apps)            |
+| CI               | GitHub Actions + OIDC           |
+| Metrics          | Prometheus + Grafana            |
+| Logs             | Loki + Promtail                 |
+| Alerting         | Alertmanager → Slack            |
+| Image Scanning   | Trivy (CVE blocking)            |
+| IaC Scanning     | Checkov (misconfiguration)      |
+| Code Quality     | SonarCloud (quality gate)       |
+| Secrets          | AWS Secrets Manager             |
+
+## Key Features
+
+- **Zero-downtime deployments** via Helm rolling update strategy
+- **GitOps delivery** — git revert = instant rollback, no kubectl needed
+- **OIDC authentication** — no long-lived AWS keys in CI
+- **CVE blocking** — CRITICAL/HIGH vulnerabilities prevent ECR push
+- **Self-healing cluster** — ArgoCD reverts manual changes automatically
+- **Full observability** — metrics, logs, and alerts in unified Grafana UI
+- **IAM least privilege** — all roles scoped to specific resource ARNs
+
+## Architecture
+
+The platform is divided into 7 layers built sequentially:
+
+1. **Network** — VPC with 3 subnet tiers, NAT, ALB, bastion
+2. **Compute** — EKS cluster, EC2 nodes, Ansible configuration
+3. **CI** — GitHub Actions: test → scan → build → push to ECR
+4. **CD** — ArgoCD GitOps: config repo → render Helm → apply to cluster
+5. **Observability** — kube-prometheus-stack + Loki + Grafana dashboards
+6. **Security** — Trivy, Checkov, SonarCloud, IAM audit, secrets management
+7. **Documentation** — architecture diagram, runbooks, cost estimate
+
+## Prerequisites
+
+- Terraform >= 1.7
+- kubectl >= 1.29
+- Helm >= 3.14
+- AWS CLI >= 2.0 (configured with appropriate IAM permissions)
+- Python >= 3.9 (for Ansible)
+
+## Getting Started
+
+\`\`\`bash
+# 1. Clone
+git clone https://github.com/YOUR_USERNAME/devops-platform
+cd devops-platform
+
+# 2. Bootstrap remote state (one time)
+cd scripts && ./bootstrap-state.sh
+
+# 3. Configure variables
+cp terraform/terraform.tfvars.example terraform/terraform.tfvars
+# Edit terraform.tfvars with your values
+
+# 4. Deploy infrastructure
+cd terraform
+terraform init && terraform apply
+
+# 5. Configure servers
+cd ansible
+ansible-playbook playbooks/app_servers.yml
+
+# 6. Deploy ArgoCD and bootstrap GitOps
+kubectl apply -f gitops-config/apps/app-of-apps.yaml
+
+# 7. Verify
+kubectl get pods --all-namespaces
+argocd app list
+\`\`\`
+
+## Security
+
+- **No stored AWS credentials** — GitHub Actions uses OIDC role assumption
+- **Image CVE blocking** — Trivy blocks CRITICAL/HIGH before ECR push
+- **IaC scanning** — Checkov gates all Terraform changes in CI
+- **Code quality gate** — SonarCloud blocks PRs with new vulnerabilities
+- **Secrets management** — all credentials in AWS Secrets Manager, retrieved via IAM role
+- **IAM least privilege** — custom policies scoped to specific resource ARNs
+- **SSH hardening** — bastion-only entry, PasswordAuthentication disabled
+- **Pre-commit hooks** — detect-secrets prevents credential commits
+
+## Observability
+
+- **Grafana dashboards**: cluster overview, app performance (RPS / error rate / p99 latency)
+- **Loki**: all pod logs searchable by namespace, pod, container, log level
+- **Alert rules**: high error rate, p99 latency, pod crash-loop, memory pressure (→ Slack)
+- **Custom metrics**: HTTP request counter + latency histogram via prom-client
+
+## Cost Estimate (approximate)
+
+| Resource        | Monthly cost |
+|-----------------|-------------|
+| EKS cluster     | ~$73        |
+| EC2 nodes (x2 t3.medium) | ~$60 |
+| RDS t3.medium   | ~$50        |
+| ALB             | ~$20        |
+| NAT Gateway     | ~$35        |
+| S3 + misc       | ~$10        |
+| **Total**       | **~$248/mo**|
+
+*Costs reducible to ~$60/mo for learning by using t3.micro nodes and stopping when not in use.*
+</pre></div>`
+    }
+  ]
+},
+
+// ── 3 ─────────────────────────────────────────────────────
+{
+  title:"The Loom walkthrough video", sub:"demo video",
+  eyebrow:"Step 3", headline:"Record the 3-minute demo",
+  desc:"A short video proves the project actually runs and shows you can communicate technically. Hiring managers who are on the fence after reading a README will watch a demo video. Keep it exactly 3 minutes — anything longer loses viewers.",
+  tags:["loom","doc"],
+  tag:"loom",
+  chunks:[
+    {
+      dot:"loom", label:"Exact script — what to show in each minute", badge:"loom", bt:"loom",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">3-minute video script</span></div>
+<div style="padding:14px;background:var(--bg)">
+  <div class="loom-row">
+    <div class="loom-time">0:00–0:30</div>
+    <div class="loom-content"><strong>Architecture overview (30 sec)</strong><br>Open the architecture diagram. Say out loud: "This is a full GitOps DevOps platform on AWS. I'll show you a code push going all the way to a running pod in about 2 minutes." Point to each layer briefly — infra, CI, CD, observability. Don't explain every detail — just orient the viewer.</div>
+  </div>
+  <div class="loom-row">
+    <div class="loom-time">0:30–1:15</div>
+    <div class="loom-content"><strong>Live CI pipeline (45 sec)</strong><br>Make a small code change: <code>echo "// demo" >> app/index.js</code>, commit and push. Switch to GitHub Actions tab. Show the pipeline running: test job → Trivy scan → SonarCloud → build and push to ECR. Say: "Trivy is scanning the image for CVEs here — if it finds CRITICAL or HIGH, the push is blocked." Show it passing.</div>
+  </div>
+  <div class="loom-row">
+    <div class="loom-time">1:15–2:00</div>
+    <div class="loom-content"><strong>ArgoCD GitOps sync (45 sec)</strong><br>Switch to ArgoCD UI. Show the app-staging Application. Show the gitops-config repo has a new commit (the image tag update CI pushed). Show ArgoCD detecting OutOfSync and syncing automatically. Show the pod list updating with the new image. Say: "No kubectl, no helm upgrade — git is the control plane."</div>
+  </div>
+  <div class="loom-row">
+    <div class="loom-time">2:00–2:30</div>
+    <div class="loom-content"><strong>Observability (30 sec)</strong><br>Switch to Grafana. Show the App Performance dashboard — RPS graph, error rate (should be near zero), p99 latency. Switch to Loki Explore, run <code>{namespace="devops-platform"}</code>, show live logs appearing. Say: "I can correlate a latency spike with the logs from that exact time window."</div>
+  </div>
+  <div class="loom-row">
+    <div class="loom-time">2:30–3:00</div>
+    <div class="loom-content"><strong>One impressive detail (30 sec)</strong><br>Pick ONE thing that surprised you during the build and show it. The selfHeal reverting a manual kubectl scale. The OIDC auth — show the GitHub Actions log saying "Assuming role via OIDC, no keys stored." The Trivy blocking a vulnerable base image. Close with: "Full source at github.com/YOUR_USERNAME/devops-platform."</div>
+  </div>
+</div>`,
+      why:"<strong>The 30-second impressive detail is what people remember.</strong> The rest of the demo is expected. Showing something unexpected — selfHeal reverting a live cluster change in real time — makes the video memorable and gives the interviewer something specific to ask you about."
+    },
+    {
+      dot:"loom", label:"Recording setup tips", badge:"concept", bt:"concept",
+      body:`<div class="chklist">
+<div class="chk"><span class="ci">✓</span>Use Loom (free tier) — records screen + face camera simultaneously, generates a shareable link immediately</div>
+<div class="chk"><span class="ci">✓</span>Increase terminal font size to 16px before recording — small text is unreadable on a shared screen</div>
+<div class="chk"><span class="ci">✓</span>Open all browser tabs before recording — switching to a blank screen while you load ArgoCD kills momentum</div>
+<div class="chk"><span class="ci">✓</span>Do one dry run first — 3 minutes goes faster than you expect</div>
+<div class="chk"><span class="ci">✓</span>Add the Loom link to your README under a "Demo" section near the top</div>
+<div class="chk"><span class="ci">✓</span>Do not re-record more than twice — imperfection in a demo signals confidence, not carelessness</div>
+</div>`
+    }
+  ]
+},
+
+// ── 4 ─────────────────────────────────────────────────────
+{
+  title:"The technical blog post", sub:"writing",
+  eyebrow:"Step 4", headline:"Write the blog post",
+  desc:"The blog post is the highest-leverage thing in Phase 7. Most engineers cannot explain what they built in writing. A clear technical post on dev.to or Hashnode gets indexed by Google, found by recruiters, shared on LinkedIn, and referenced in interviews. Pick one hard problem from the project and write about it.",
+  tags:["blog","doc"],
+  tag:"blog",
+  chunks:[
+    {
+      dot:"blog", label:"Why the blog post matters more than you think", badge:"deep dive", bt:"deep",
+      body:`<div class="analogy">
+  <div class="analogy-head blog">The compounding value of a technical post</div>
+  <div class="analogy-body">
+    A blog post does things your CV cannot:<br><br>
+    <strong>It proves you understand what you built.</strong> Anyone can follow a tutorial and push code. Only someone who understood it can explain why a decision was made, what tradeoff was accepted, and what would happen if you chose differently.<br><br>
+    <strong>It gets discovered.</strong> A post titled "How I set up OIDC authentication between GitHub Actions and AWS — no stored keys" will rank on Google for that search. Recruiters and engineers search for these topics. Your CV does not appear in those results. Your blog post does.<br><br>
+    <strong>It gives interviewers material.</strong> When you reference a blog post in an interview, the interviewer reads it before your next round. They ask you about it. You are now being interviewed on a topic you chose and prepared.
+  </div>
+</div>`
+    },
+    {
+      dot:"blog", label:"The four best topic options — pick one", badge:"blog", bt:"blog",
+      body:`<div class="chklist">
+<div class="chk"><span class="ca">A</span><strong style="color:var(--text)">OIDC auth between GitHub Actions and AWS</strong> — "How I eliminated AWS access keys from CI/CD using OIDC". Searchable, specific, solves a real problem most engineers have. Easiest to write because the mechanism is clear.</div>
+<div class="chk"><span class="ca">B</span><strong style="color:var(--text)">GitOps with ArgoCD — the two-repo pattern</strong> — "Why I separated app code from cluster config and what changed". Good for showing architectural thinking. Explains the shift-left mental model.</div>
+<div class="chk"><span class="ca">C</span><strong style="color:var(--text)">Helm charts from scratch</strong> — "Writing a production Helm chart without using helm create". Practical, searchable, shows depth. Most people use helm create and never understand the generated files.</div>
+<div class="chk"><span class="ca">D</span><strong style="color:var(--text)">Prometheus alerting that doesn't lie</strong> — "Why ratio-based alert thresholds beat fixed thresholds". Counterintuitive insight, shows operational maturity, very searchable for on-call engineers.</div>
+</div>`
+    },
+    {
+      dot:"blog", label:"Blog post structure — the outline that works", badge:"write this", bt:"do",
+      body:`<div class="blog-section">
+  <div class="blog-section-title">Section 1 — Hook (1 paragraph)</div>
+  <div class="blog-section-body">Start with the problem, not the solution. "Every time I set up a CI pipeline, the first thing I did was create an IAM user, generate access keys, and paste them into GitHub Secrets. Then I read about a company that had their CI compromised and those keys were used to exfiltrate data from S3. I started looking for a better way." The reader needs to feel the pain before they care about the fix.</div>
+</div>
+<div class="blog-section">
+  <div class="blog-section-title">Section 2 — The old way and its problems (3–4 paragraphs)</div>
+  <div class="blog-section-body">Describe the approach most people use. Explain specifically why it is dangerous or fragile. Use concrete examples. "Long-lived access keys don't expire. If they leak — via a public git commit, a compromised laptop, a misconfigured secret manager — they give the attacker the same access as your CI pipeline indefinitely."</div>
+</div>
+<div class="blog-section">
+  <div class="blog-section-title">Section 3 — The solution with a clear explanation (core of the post)</div>
+  <div class="blog-section-body">Explain the mechanism, not just the commands. For OIDC: "GitHub generates a signed JWT for each workflow run. AWS validates the signature against GitHub's public keys. If valid, AWS issues temporary credentials that expire in 15 minutes. No secret ever stored anywhere." Diagrams here are extremely valuable — even a simple ASCII diagram.</div>
+</div>
+<div class="blog-section">
+  <div class="blog-section-title">Section 4 — Step by step implementation (the practical part)</div>
+  <div class="blog-section-body">Exact code blocks. Terraform for the OIDC provider and IAM role. The GitHub Actions workflow step. Annotated with explanations of why each line is there. This is what people will copy — make it correct and complete.</div>
+</div>
+<div class="blog-section">
+  <div class="blog-section-title">Section 5 — What you learned / tradeoffs / what to watch out for</div>
+  <div class="blog-section-body">This section is what separates a tutorial from a technical article. "One thing I didn't expect: the OIDC condition in the IAM role must match your exact repo path. Getting this wrong gives you a cryptic STS error that took me an hour to debug." Real lessons from real experience.</div>
+</div>
+<div class="blog-section">
+  <div class="blog-section-title">Section 6 — Conclusion with link to GitHub repo</div>
+  <div class="blog-section-body">One paragraph. Restate the key insight. Link to the full repo. "The full Terraform code for the OIDC provider and IAM role is in github.com/YOUR_USERNAME/devops-platform/terraform/modules/iam/."</div>
+</div>`,
+      why:"<strong>Section 5 is why people share the post.</strong> Generic tutorials are everywhere. Real lessons from real problems are rare. When you write 'this took me an hour to debug', engineers who hit the same wall find it in a Google search at 2am and share it with their team."
+    },
+    {
+      dot:"blog", label:"Where to publish and how to promote", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">publishing checklist</span></div><pre>
+<span class="cm"># 1. Write on dev.to or hashnode.com</span>
+<span class="cm">#    Both are free, indexed by Google quickly, have DevOps audiences</span>
+<span class="cm">#    dev.to has better organic reach for first posts</span>
+
+<span class="cm"># 2. Tags to use on dev.to</span>
+#devops #aws #github #kubernetes #terraform
+
+<span class="cm"># 3. Cross-post to LinkedIn as an article (same content)</span>
+<span class="cm">#    LinkedIn posts get seen by recruiters who never visit dev.to</span>
+
+<span class="cm"># 4. Add the post link to your GitHub profile README</span>
+<span class="cm"># 5. Add it to your CV under "Publications / Technical Writing"</span>
+
+<span class="cm"># 6. Share in these communities:</span>
+<span class="cm">#    r/devops on Reddit</span>
+<span class="cm">#    DevOps Discord servers</span>
+<span class="cm">#    Any Egyptian tech communities or LinkedIn groups</span>
+</pre></div>`,
+      why:"<strong>Sharing is not self-promotion — it is distribution.</strong> A post that nobody reads helped nobody. Share it once in relevant communities, then let search engines do the rest. The half-life of a technical post is years, not days."
+    }
+  ]
+},
+
+// ── 5 ─────────────────────────────────────────────────────
+{
+  title:"Update the CV", sub:"cv update",
+  eyebrow:"Step 5", headline:"Add the project to your CV",
+  desc:"The project needs a single dense entry in your CV that communicates the full scope in under 6 bullet points. Every bullet is an achievement with a metric or a specific technical claim, not a description of a tool.",
+  tags:["cv"],
+  tag:"cv",
+  chunks:[
+    {
+      dot:"cv", label:"The project CV entry — copy this structure", badge:"cv", bt:"cv",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">CV — Projects section</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+Production GitOps Platform | AWS · Terraform · Kubernetes · ArgoCD · Prometheus
+github.com/YOUR_USERNAME/devops-platform
+
+• Provisioned multi-tier AWS infrastructure (VPC, EKS, RDS, ALB) using modular
+  Terraform with S3 remote state and DynamoDB locking across 2 availability zones
+
+• Built GitHub Actions CI pipeline with OIDC authentication (no stored AWS keys),
+  multi-stage Docker builds with layer caching cutting build time from 3 min to 40 sec
+
+• Implemented GitOps delivery via ArgoCD: two-repo pattern, App of Apps, self-healing
+  cluster — git revert triggers automatic rollback with full audit trail in Git history
+
+• Deployed full observability stack (Prometheus, Grafana, Loki, Alertmanager) with
+  custom PromQL alert rules and Grafana dashboards provisioned as Kubernetes ConfigMaps
+
+• Integrated DevSecOps pipeline: Trivy CVE blocking on image push, Checkov IaC
+  scanning on Terraform changes, SonarCloud quality gate blocking PRs on new vulnerabilities
+</pre></div>`,
+      why:"<strong>Every bullet answers 'so what?'</strong> Not 'used Docker' but 'multi-stage Docker builds cutting build time from 3 min to 40 sec.' Not 'installed Prometheus' but 'custom PromQL alert rules routing to Slack by severity.' Numbers, specifics, and outcomes. Recruiters read 300 CVs. Vague bullets vanish."
+    },
+    {
+      dot:"cv", label:"The full CV bullet set — one per phase", badge:"cv", bt:"cv",
+      body:`<div class="cv-table">
+  <div class="cv-row head">
+    <div class="cv-phase">Phase</div>
+    <div class="cv-line">CV bullet</div>
+  </div>
+  <div class="cv-row">
+    <div class="cv-phase">1 · Infra</div>
+    <div class="cv-line">Provisioned multi-tier AWS VPC (public/private/data subnets) and configured EC2 + RDS using modular Terraform with remote state, Ansible dynamic inventory, and SSH bastion pattern</div>
+  </div>
+  <div class="cv-row">
+    <div class="cv-phase">2 · CI</div>
+    <div class="cv-line">Built GitHub Actions pipeline with OIDC role assumption (no stored credentials), multi-stage Docker builds with GHA layer caching — build time 3 min → 40 sec</div>
+  </div>
+  <div class="cv-row">
+    <div class="cv-phase">3 · K8s</div>
+    <div class="cv-line">Authored Helm charts from scratch (Deployment, Service, Ingress, HPA, ConfigMap) deployed to AWS EKS — liveness/readiness probes enabling zero-downtime rolling updates</div>
+  </div>
+  <div class="cv-row">
+    <div class="cv-phase">4 · GitOps</div>
+    <div class="cv-line">Implemented GitOps with ArgoCD: two-repo pattern, App of Apps, automated self-healing — git revert triggers rollback with full audit trail; CI never touches cluster directly</div>
+  </div>
+  <div class="cv-row">
+    <div class="cv-phase">5 · Obs</div>
+    <div class="cv-line">Deployed Prometheus + Grafana + Loki observability stack; wrote 6 PromQL alert rules (error rate, p99 latency, pod restarts) routing to Slack; dashboards version-controlled as ConfigMaps</div>
+  </div>
+  <div class="cv-row">
+    <div class="cv-phase">6 · Sec</div>
+    <div class="cv-line">DevSecOps pipeline: Trivy blocks CRITICAL CVEs before ECR push, Checkov gates Terraform misconfigurations, SonarCloud quality gate on PRs, IAM roles scoped to specific ARNs</div>
+  </div>
+</div>`
+    }
+  ]
+},
+
+// ── 6 ─────────────────────────────────────────────────────
+{
+  title:"Interview preparation", sub:"interview prep",
+  eyebrow:"Step 6", headline:"Prepare for the interviews",
+  desc:"The project gives you material for every DevOps interview question. This step maps the most common interview questions to exactly what in your project answers them — so you are never caught off guard.",
+  tags:["cv","concept"],
+  tag:"cv",
+  chunks:[
+    {
+      dot:"cv", label:"The questions you will be asked — and your answers", badge:"concept", bt:"concept",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">interview Q&A from your project</span></div><pre>
+<span class="co">Q: How does your CI/CD pipeline work?</span>
+A: GitHub Actions runs on push: tests → Trivy filesystem scan →
+   SonarCloud quality gate → Docker build → Trivy image scan →
+   push to ECR → update gitops-config repo image tag → ArgoCD
+   detects change → renders Helm chart → rolling update on EKS.
+   CI never touches the cluster. ArgoCD is the only thing that deploys.
+
+<span class="co">Q: How do you handle secrets in your pipeline?</span>
+A: GitHub Actions authenticates to AWS via OIDC role assumption —
+   no access keys stored anywhere. App secrets are in AWS Secrets
+   Manager, fetched at runtime via EC2/pod IAM role. pre-commit
+   hooks run detect-secrets to prevent accidental commits.
+
+<span class="co">Q: What happens when a deployment goes wrong?</span>
+A: git revert on the gitops-config repo. ArgoCD detects the new
+   commit, re-renders the Helm chart with the previous image tag,
+   and applies a rolling update back to the known-good version.
+   Full audit trail in Git. No manual kubectl involved.
+
+<span class="co">Q: How do you monitor the system?</span>
+A: Prometheus scrapes metrics via ServiceMonitor CRDs every 15s.
+   Custom app metrics exposed via prom-client: HTTP request counter
+   and latency histogram. Grafana dashboards show RPS, error rate,
+   p50/p95/p99 latency. Loki aggregates pod logs via Promtail
+   DaemonSet. Alertmanager routes to Slack by severity.
+
+<span class="co">Q: Explain GitOps to me.</span>
+A: Git is the single source of truth for cluster state. An agent
+   (ArgoCD) inside the cluster polls a config repo and continuously
+   reconciles cluster state to match Git. If someone manually
+   changes something in the cluster, ArgoCD detects drift and reverts
+   it within 3 minutes. Rollback is git revert. Audit trail is git log.
+
+<span class="co">Q: How is your Terraform structured?</span>
+A: Module-per-concern: networking, security-groups, compute, data, iam,
+   eks. Root main.tf calls modules and passes outputs between them.
+   Remote state in S3 with DynamoDB locking. default_tags block
+   auto-tags every resource. tfvars gitignored. CI runs Checkov
+   before terraform plan.
+
+<span class="co">Q: Walk me through your security model.</span>
+A: Five layers: 1) OIDC auth — no long-lived keys. 2) Trivy —
+   CVEs blocked before ECR push. 3) Checkov — misconfigs blocked
+   before terraform apply. 4) IAM least privilege — scoped policies,
+   not managed AdministratorAccess. 5) Secrets Manager — no secrets
+   on disk or in env files. Plus bastion-only SSH, SSH hardening,
+   pre-commit secret detection.
+</pre></div>`
+    },
+    {
+      dot:"cv", label:"Questions that trip people up — prepare these specifically", badge:"concept", bt:"concept",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">harder questions — prepare these</span></div><pre>
+<span class="co">Q: What's the difference between liveness and readiness probes?</span>
+A: Liveness — if this fails, restart the pod. Readiness — if this
+   fails, stop sending traffic to this pod but don't restart it.
+   A pod that's starting up should fail readiness until warmed up.
+   A pod in a bad state (deadlock) should fail liveness to restart.
+
+<span class="co">Q: Why did you use a separate gitops-config repo?</span>
+A: Three reasons: 1) Deploy is a deliberate act separate from code
+   merge. 2) Config history is a clean audit trail — git log shows
+   every deploy with timestamp and deployer. 3) CI only needs write
+   access to the config repo, not the cluster — smaller blast radius
+   if CI is compromised.
+
+<span class="co">Q: What does ArgoCD selfHeal actually do?</span>
+A: ArgoCD polls the cluster every 3 minutes. It compares live cluster
+   state to the rendered Helm chart from Git. If they differ — even
+   from a manual kubectl change — it re-applies the Git version.
+   The cluster converges to Git. You cannot accidentally leave the
+   cluster in an unknown state.
+
+<span class="co">Q: Why use Loki instead of Elasticsearch?</span>
+A: Loki only indexes labels (pod, namespace, app) — not log content.
+   Content is stored compressed in S3. This makes storage 10x cheaper.
+   For Kubernetes, you almost always know which pod you care about —
+   label filtering gets you there fast, then grep the content.
+   ELK is better for full-text search across millions of events.
+
+<span class="co">Q: How would you scale this for 10 teams?</span>
+A: ArgoCD ApplicationSets to template Applications per team. Separate
+   namespaces per team with RBAC. Separate gitops-config paths per
+   team. Shared monitoring namespace with per-namespace Grafana
+   datasources. Checkov policies enforced centrally in CI.
+</pre></div>`,
+      why:"<strong>The last question — how to scale — is the one that separates 1-2 YOE candidates from more senior ones.</strong> Having a concrete answer shows you thought beyond your own project. You do not need to have built ApplicationSets — you need to know what the problem looks like at scale and what the tools are."
+    }
+  ]
+},
+
+// ── 7 ─────────────────────────────────────────────────────
+{
+  title:"Final checklist — is the project ready?", sub:"final check",
+  eyebrow:"Step 7", headline:"Final readiness checklist",
+  desc:"Before you add this project to your CV and start applying, run through this complete checklist. Every item that is not done is a gap an interviewer might find before you do.",
+  tags:["doc","cv"],
+  tag:"final",
+  chunks:[
+    {
+      dot:"check", label:"Repository quality", badge:"verify", bt:"run",
+      body:`<div class="chklist">
+<div class="chk"><span class="ci">✓</span>README has all 10 sections (header, diagram, stack, features, structure, getting started, CI/CD, security, observability, cost)</div>
+<div class="chk"><span class="ci">✓</span>Architecture diagram embedded in README as an inline image</div>
+<div class="chk"><span class="ci">✓</span>.drawio source file committed to docs/ folder</div>
+<div class="chk"><span class="ci">✓</span>Loom demo video link in README near the top</div>
+<div class="chk"><span class="ci">✓</span>GitHub Actions badge showing CI passing visible in README header</div>
+<div class="chk"><span class="ci">✓</span>.gitignore covers: .terraform/, *.tfstate, *.tfvars, *.pem, .env*</div>
+<div class="chk"><span class="ci">✓</span>No secrets, credentials, or real IPs committed to the repo</div>
+<div class="chk"><span class="ci">✓</span>Last commit is recent (within last 2 weeks)</div>
+</div>`
+    },
+    {
+      dot:"check", label:"Technical completeness", badge:"verify", bt:"run",
+      body:`<div class="chklist">
+<div class="chk"><span class="ci">✓</span>terraform validate passes with no errors</div>
+<div class="chk"><span class="ci">✓</span>All 7 phases of code present and organised into the correct folders</div>
+<div class="chk"><span class="ci">✓</span>GitHub Actions CI pipeline passing on main branch</div>
+<div class="chk"><span class="ci">✓</span>Trivy and Checkov scans visible in GitHub Security tab</div>
+<div class="chk"><span class="ci">✓</span>Helm chart lints cleanly: helm lint helm/app</div>
+<div class="chk"><span class="ci">✓</span>ArgoCD Applications exist for staging and prod environments</div>
+<div class="chk"><span class="ci">✓</span>Prometheus rules file committed under helm/observability/</div>
+</div>`
+    },
+    {
+      dot:"check", label:"Portfolio and CV readiness", badge:"verify", bt:"run",
+      body:`<div class="chklist">
+<div class="chk"><span class="ci">✓</span>Blog post published on dev.to or Hashnode with link in README</div>
+<div class="chk"><span class="ci">✓</span>Loom video recorded, trimmed to under 3:30, shareable link working</div>
+<div class="chk"><span class="ci">✓</span>CV updated with the project entry (5 bullets using achievement format)</div>
+<div class="chk"><span class="ci">✓</span>All 6 per-phase CV bullets written and added to CV skills section</div>
+<div class="chk"><span class="ci">✓</span>GitHub profile README links to this project prominently</div>
+<div class="chk"><span class="ci">✓</span>You can answer all 10 interview questions from Step 6 without notes</div>
+<div class="chk"><span class="ci">✓</span>You can walk through the architecture diagram live in under 5 minutes</div>
+</div>`
+    }
+  ]
+},
+
+// ── 8 ─────────────────────────────────────────────────────
+{
+  title:"Project complete — what you built", sub:"complete",
+  eyebrow:"Project Complete", headline:"What you now have",
+  desc:"You built a production-grade DevOps platform across 7 phases. This is what the complete project means for your job search.",
+  tags:["cv","concept"],
+  tag:"final",
+  chunks:[
+    {
+      dot:"check", label:"The complete picture — every phase and what it shows", badge:"final", bt:"final",
+      body:`<div class="cv-table">
+  <div class="cv-row head">
+    <div class="cv-phase">Phase</div>
+    <div class="cv-line">What it demonstrates to an interviewer</div>
+  </div>
+  <div class="cv-row">
+    <div class="cv-phase">1 · Infra</div>
+    <div class="cv-line">You understand AWS networking from first principles. You can build multi-tier infrastructure, not just click through the console. You know Terraform module structure and remote state.</div>
+  </div>
+  <div class="cv-row">
+    <div class="cv-phase">2 · CI</div>
+    <div class="cv-line">You understand container best practices (multi-stage, layer caching, .dockerignore). You know the correct way to authenticate CI to AWS — OIDC, not access keys.</div>
+  </div>
+  <div class="cv-row">
+    <div class="cv-phase">3 · K8s + Helm</div>
+    <div class="cv-line">You can write Kubernetes manifests from scratch and package them in Helm. You understand the difference between liveness and readiness. You know resource limits and HPA.</div>
+  </div>
+  <div class="cv-row">
+    <div class="cv-phase">4 · GitOps</div>
+    <div class="cv-line">You understand the GitOps mental model — not just the tool. You can explain why CI should never touch the cluster. You understand self-healing and what it means for operations.</div>
+  </div>
+  <div class="cv-row">
+    <div class="cv-phase">5 · Observability</div>
+    <div class="cv-line">You can write PromQL. You understand the three pillars. You know why ratio-based alerts beat fixed thresholds. You can explain Loki's index model and when to use it vs ELK.</div>
+  </div>
+  <div class="cv-row">
+    <div class="cv-phase">6 · Security</div>
+    <div class="cv-line">You know what a CVE is and how CVSS scoring works. You can explain shift-left security. You have IAM least privilege implemented, not just mentioned on a CV.</div>
+  </div>
+  <div class="cv-row">
+    <div class="cv-phase">7 · Polish</div>
+    <div class="cv-line">You can communicate technically in writing. You documented the project like a professional. You thought about cost. You prepared for interviews instead of hoping for the best.</div>
+  </div>
+</div>`
+    },
+    {
+      dot:"cv", label:"What to do next — the job search sequence", badge:"final", bt:"final",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">job search sequence — Cairo DevOps market</span></div><pre>
+<span class="cm"># Week 1 after finishing Phase 7:</span>
+1. Update LinkedIn title to "DevOps Engineer | AWS · Kubernetes · GitOps"
+2. Add project to LinkedIn Featured section (pin it)
+3. Publish blog post, share on LinkedIn
+4. Update CV PDF — send to trusted people for review
+
+<span class="cm"># Week 2+: Start applying</span>
+5. Target roles: "DevOps Engineer", "Cloud Engineer", "Platform Engineer"
+   in Cairo-based companies and remote-friendly companies in Egypt
+6. Apply with the project as your primary portfolio piece
+7. In cover letter / intro message: one sentence on the project +
+   link to GitHub + link to Loom video
+
+<span class="cm"># During interviews:</span>
+8. Offer to walk through the architecture diagram early
+9. Reference specific phases when answering questions
+10. When asked "tell me about a challenge": use the OIDC debugging
+    story, or the ArgoCD self-heal discovery, or the Trivy threshold decision
+
+<span class="cm"># The honest reality:</span>
+<span class="cm"># This project makes you competitive for 1-2 YOE DevOps roles.</span>
+<span class="cm"># You built what most 1-2 YOE engineers have only read about.</span>
+<span class="cm"># The gap between you and someone with 1 year of work experience</span>
+<span class="cm"># is now smaller than the gap between you and someone who</span>
+<span class="cm"># only took AWS courses but never built anything.</span>
+</pre></div>`,
+      why:"<strong>The project is not the end — it is the beginning of a conversation.</strong> Every interview question about DevOps now has a concrete example behind it: 'we did this in my project, here is what I learned.' That specificity is what converts interviews into offers."
+    },
+    {
+      dot:"check", label:"All 7 phase guide files — your complete reference library", badge:"final", bt:"final",
+      body:`<div class="chklist">
+<div class="chk"><span class="ci">✓</span><strong style="color:var(--text)">Phase 1</strong> — Repo structure, Terraform backend, networking, security groups, IAM, compute, Ansible integration</div>
+<div class="chk"><span class="ci">✓</span><strong style="color:var(--text)">Phase 2</strong> — Docker multi-stage builds, ECR, GitHub Actions CI, OIDC auth, layer caching</div>
+<div class="chk"><span class="ci">✓</span><strong style="color:var(--text)">Phase 3</strong> — EKS, Helm from first principles, all templates written, NGINX Ingress, HPA, per-environment values</div>
+<div class="chk"><span class="ci">✓</span><strong style="color:var(--text)">Phase 4</strong> — GitOps mental model, ArgoCD, two-repo pattern, App of Apps, staging→prod promotion</div>
+<div class="chk"><span class="ci">✓</span><strong style="color:var(--text)">Phase 5</strong> — Prometheus, Grafana, Loki, Alertmanager — all from first principles, PromQL, LogQL, alert rules</div>
+<div class="chk"><span class="ci">✓</span><strong style="color:var(--text)">Phase 6</strong> — CVEs, CVSS, Trivy, Checkov, SonarQube, IAM audit, secrets management</div>
+<div class="chk"><span class="ci">✓</span><strong style="color:var(--text)">Phase 7</strong> — Architecture diagram, README, Loom video, blog post, CV update, interview prep</div>
+</div>`
+    }
+  ]
+}
+
+];
+
+let cur = 0;
+const done = new Set();
+
+function renderNav() {
+  document.getElementById('nav-scroll').innerHTML = STEPS.map((s,i) => `
+    <div class="nav-item ${i===cur?'active':''} ${done.has(i)?'done':''}" onclick="jump(${i})">
+      <div class="nn">${done.has(i)?'✓':i+1}</div>
+      <div class="nt">
+        <div class="ntitle">${s.title}</div>
+        <div class="nsub">${s.sub}</div>
+      </div>
+      <div class="ntag ${s.tag}">${s.tag}</div>
+    </div>
+  `).join('');
+  const pct = Math.round(done.size/STEPS.length*100);
+  document.getElementById('prog-fill').style.width=pct+'%';
+  document.getElementById('prog-txt').textContent=`${done.size} / ${STEPS.length}`;
+}
+
+function renderMain() {
+  const s = STEPS[cur];
+  document.getElementById('main-head').innerHTML=`
+    <div class="eyebrow">${s.eyebrow}</div>
+    <div class="headline">${s.headline}</div>
+    <div class="step-desc">${s.desc}</div>
+    <div class="tag-row">${s.tags.map(t=>`<span class="tag ${t}">${t}</span>`).join('')}</div>
+  `;
+  document.getElementById('content').innerHTML=s.chunks.map((c,ci)=>`
+    <div class="chunk ${ci===0?'open':''}" id="c${ci}">
+      <div class="chunk-head" onclick="tog(${ci})">
+        <div class="cdot ${c.dot}"></div>
+        <span class="clabel">${c.label}</span>
+        <span class="cbadge ${c.bt}">${c.badge}</span>
+        <span class="cchev">▼</span>
+      </div>
+      <div class="chunk-body">
+        ${c.body}
+        ${c.why?`<div class="why"><div class="why-lbl">why this matters</div><p>${c.why}</p></div>`:''}
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('step-lbl').textContent=`step ${cur+1} of ${STEPS.length}`;
+  document.getElementById('btn-prev').disabled=cur===0;
+  document.getElementById('btn-next').textContent=cur===STEPS.length-1?'✓ complete':'next →';
+}
+
+function tog(ci){document.getElementById(`c${ci}`).classList.toggle('open');}
+
+function go(dir){
+  if(dir===1&&cur<STEPS.length-1){done.add(cur);cur++;}
+  else if(dir===-1&&cur>0)cur--;
+  renderNav();renderMain();
+  document.querySelector('.main').scrollTop=0;
+}
+
+function jump(i){
+  if(i<cur)done.delete(i);
+  cur=i;renderNav();renderMain();
+}
+
+function cp(btn){
+  const pre=btn.closest('.cw').querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText).then(()=>{
+    btn.textContent='copied!';btn.classList.add('ok');
+    setTimeout(()=>{btn.textContent='copy';btn.classList.remove('ok');},2000);
+  });
+}
+
+renderNav();renderMain();
+</script>
+</body>
+</html>

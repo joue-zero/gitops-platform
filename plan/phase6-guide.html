@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Phase 6 — DevSecOps</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Exo+2:wght@800;900&display=swap');
+
+:root {
+  --bg:    #070608;
+  --s1:    #0B0A0D;
+  --s2:    #100F14;
+  --s3:    #161420;
+  --border:#1E1C28;
+  --bord2: #2C2840;
+  --text:  #C0BAD8;
+  --muted: #302C48;
+  --dim:   #1C1A28;
+  --trivy: #00BCD4;
+  --chk:   #7C4DFF;
+  --sonar: #4CAF50;
+  --red:   #EF5350;
+  --yellow:#FFA726;
+  --green: #66BB6A;
+  --pink:  #EC407A;
+  --acc:   #7C4DFF;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: 'IBM Plex Mono', monospace; min-height: 100vh; }
+::-webkit-scrollbar { width: 3px; height: 3px; }
+::-webkit-scrollbar-track { background: var(--bg); }
+::-webkit-scrollbar-thumb { background: var(--dim); border-radius: 2px; }
+
+.shell { display: grid; grid-template-columns: 272px 1fr; min-height: 100vh; }
+
+/* SIDEBAR */
+.sidebar { background: var(--s1); border-right: 1px solid var(--border); position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+.sb-head { padding: 22px 18px 16px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.phase-dot { display: inline-flex; align-items: center; gap: 5px; font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--red); margin-bottom: 8px; }
+.phase-dot::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--red); box-shadow: 0 0 8px var(--red); }
+.sb-title { font-family: 'Exo 2', sans-serif; font-size: 17px; font-weight: 900; color: #fff; line-height: 1.2; }
+.sb-pills { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+.pill { font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 2px; border: 1px solid; }
+.pill.trivy  { color: var(--trivy); border-color: #0A4A54; background: #020E12; }
+.pill.chk    { color: var(--chk);   border-color: #3A1A7F; background: #0E0420; }
+.pill.sonar  { color: var(--sonar); border-color: #1A4A1C; background: #041206; }
+.pill.week   { color: var(--yellow);border-color: #4A3010; background: #120C02; }
+
+.prog-wrap { padding: 12px 18px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.prog-row { display: flex; justify-content: space-between; font-size: 9px; color: var(--muted); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; }
+.prog-track { height: 2px; background: var(--border); border-radius: 1px; }
+.prog-fill { height: 100%; background: linear-gradient(90deg, var(--red), var(--chk)); border-radius: 1px; transition: width 0.4s; }
+
+.nav-scroll { flex: 1; overflow-y: auto; padding: 6px 0; }
+.nav-item { display: flex; align-items: flex-start; gap: 9px; padding: 8px 18px; cursor: pointer; border-left: 2px solid transparent; transition: all 0.15s; }
+.nav-item:hover { background: var(--s2); }
+.nav-item.active { background: var(--s2); border-left-color: var(--red); }
+.nav-item.done .nn { background: var(--green); color: #000; }
+.nn { width: 18px; height: 18px; border-radius: 2px; background: var(--dim); color: var(--muted); font-size: 9px; font-weight: 600; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; transition: all 0.2s; }
+.nav-item.active .nn { background: var(--red); color: #fff; }
+.nt { flex: 1; min-width: 0; }
+.ntitle { font-size: 11px; font-weight: 500; color: var(--text); line-height: 1.35; }
+.nav-item.active .ntitle { color: #fff; }
+.nsub { font-size: 9px; color: var(--muted); margin-top: 1px; }
+.ntag { font-size: 8px; padding: 1px 5px; border-radius: 1px; letter-spacing: 0.04em; flex-shrink: 0; margin-top: 2px; align-self: flex-start; }
+.ntag.trivy  { background: #020E12; color: var(--trivy); }
+.ntag.chk    { background: #0E0420; color: var(--chk); }
+.ntag.sonar  { background: #041206; color: var(--sonar); }
+.ntag.deep   { background: #180410; color: var(--pink); }
+.ntag.ci     { background: #100820; color: #A78BFA; }
+.ntag.all    { background: #0C0A18; color: var(--text); }
+
+/* MAIN */
+.main { display: flex; flex-direction: column; min-height: 100vh; }
+.main-head { padding: 26px 36px 20px; border-bottom: 1px solid var(--border); background: var(--s1); flex-shrink: 0; }
+.eyebrow { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--red); margin-bottom: 7px; }
+.headline { font-family: 'Exo 2', sans-serif; font-size: 26px; font-weight: 900; color: #fff; line-height: 1.1; margin-bottom: 8px; }
+.step-desc { font-size: 12px; color: #3A3460; line-height: 1.9; max-width: 660px; }
+.tag-row { display: flex; gap: 5px; margin-top: 12px; flex-wrap: wrap; }
+.tag { font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 7px; border-radius: 2px; border: 1px solid; }
+.tag.trivy   { color: var(--trivy); border-color: #0A4A54; background: #020E12; }
+.tag.chk     { color: var(--chk);   border-color: #3A1A7F; background: #0E0420; }
+.tag.sonar   { color: var(--sonar); border-color: #1A4A1C; background: #041206; }
+.tag.concept { color: var(--pink);  border-color: #5A1A3A; background: #180410; }
+.tag.ci      { color: #A78BFA;      border-color: #3A1A7F; background: #0E0420; }
+.tag.bash    { color: var(--yellow);border-color: #4A3010; background: #120C02; }
+
+/* CONTENT */
+.content { flex: 1; padding: 20px 36px; display: flex; flex-direction: column; gap: 10px; overflow-y: auto; }
+
+/* CHUNK */
+.chunk { border: 1px solid var(--border); border-radius: 4px; overflow: hidden; }
+.chunk-head { display: flex; align-items: center; gap: 10px; padding: 12px 15px; cursor: pointer; background: var(--s1); transition: background 0.15s; user-select: none; }
+.chunk-head:hover { background: var(--s2); }
+.chunk.open .chunk-head { background: var(--s2); border-bottom: 1px solid var(--border); }
+.cdot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.cdot.trivy  { background: var(--trivy); }
+.cdot.chk    { background: var(--chk); }
+.cdot.sonar  { background: var(--sonar); }
+.cdot.concept{ background: var(--pink); }
+.cdot.bash   { background: var(--yellow); }
+.cdot.check  { background: var(--green); }
+.cdot.ci     { background: #A78BFA; }
+.cdot.warn   { background: var(--red); }
+.cdot.all    { background: var(--text); }
+.clabel { flex: 1; font-size: 12px; font-weight: 500; color: #fff; line-height: 1.3; }
+.cbadge { font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border-radius: 2px; }
+.cbadge.do     { background: #020E12; color: var(--trivy); }
+.cbadge.run    { background: #041206; color: var(--green); }
+.cbadge.deep   { background: #180410; color: var(--pink); }
+.cbadge.concept{ background: #180410; color: var(--pink); }
+.cbadge.warn   { background: #180404; color: var(--red); }
+.cbadge.cv     { background: #0E0420; color: var(--chk); }
+.cbadge.ci     { background: #0E0420; color: #A78BFA; }
+.cbadge.trivy  { background: #020E12; color: var(--trivy); }
+.cbadge.chk    { background: #0E0420; color: var(--chk); }
+.cbadge.sonar  { background: #041206; color: var(--sonar); }
+.cchev { font-size: 10px; color: var(--muted); transition: transform 0.2s; flex-shrink: 0; }
+.chunk.open .cchev { transform: rotate(180deg); }
+.chunk-body { display: none; padding: 18px; background: var(--bg); flex-direction: column; gap: 13px; }
+.chunk.open .chunk-body { display: flex; }
+
+/* CODE */
+.cw { background: var(--s1); border: 1px solid var(--border); border-radius: 3px; overflow: hidden; }
+.cbar { display: flex; align-items: center; justify-content: space-between; padding: 6px 12px; background: var(--s2); border-bottom: 1px solid var(--border); }
+.cfile { font-size: 10px; color: var(--muted); letter-spacing: 0.05em; }
+.copybtn { font-size: 8px; letter-spacing: 0.08em; text-transform: uppercase; padding: 2px 7px; border: 1px solid var(--bord2); border-radius: 2px; background: transparent; color: var(--muted); cursor: pointer; font-family: inherit; transition: all 0.15s; }
+.copybtn:hover { color: var(--text); border-color: var(--muted); }
+.copybtn.ok { color: var(--green); border-color: var(--green); }
+pre { padding: 14px; overflow-x: auto; font-size: 11.5px; line-height: 1.8; color: var(--text); font-family: 'IBM Plex Mono', monospace; }
+.cm { color: #1E1C30; font-style: italic; }
+.ck { color: #60A5FA; }
+.cv { color: #4ADE80; }
+.cs { color: #FCD34D; }
+.cf { color: #F87171; }
+.cp { color: #C084FC; }
+.co { color: var(--trivy); }
+.cg { color: var(--green); }
+
+/* PROSE */
+.prose { font-size: 12px; color: #3A3460; line-height: 1.9; }
+.prose strong { color: var(--text); font-weight: 500; }
+.prose code { background: var(--s2); border: 1px solid var(--border); padding: 1px 5px; border-radius: 2px; font-size: 11px; color: var(--trivy); }
+.prose em { color: #5A5080; font-style: italic; }
+
+/* ANALOGY */
+.analogy { border: 1px solid var(--bord2); border-radius: 3px; overflow: hidden; }
+.analogy-head { background: var(--s3); padding: 7px 13px; font-size: 9px; letter-spacing: 0.15em; text-transform: uppercase; border-bottom: 1px solid var(--border); }
+.analogy-head.trivy { color: var(--trivy); }
+.analogy-head.chk   { color: var(--chk); }
+.analogy-head.sonar { color: var(--sonar); }
+.analogy-head.sec   { color: var(--red); }
+.analogy-body { padding: 12px 14px; font-size: 12px; color: #3A3460; line-height: 1.9; background: #050408; }
+.analogy-body strong { color: #6A6090; font-weight: 500; }
+
+/* COMPARE TABLE */
+.cmp { border: 1px solid var(--border); border-radius: 3px; overflow: hidden; font-size: 11px; }
+.crow { display: grid; border-bottom: 1px solid var(--border); }
+.crow:last-child { border-bottom: none; }
+.crow.head { background: var(--s2); }
+.crow.c2 { grid-template-columns: 1fr 1fr; }
+.crow.c3 { grid-template-columns: 1fr 1fr 1fr; }
+.crow.c4 { grid-template-columns: 0.8fr 1fr 1fr 1fr; }
+.ccell { padding: 9px 12px; border-right: 1px solid var(--border); line-height: 1.6; color: #3A3460; }
+.ccell:last-child { border-right: none; }
+.crow.head .ccell { color: var(--muted); font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; }
+.ccell.trivy { color: var(--trivy); }
+.ccell.chk   { color: var(--chk); }
+.ccell.sonar { color: var(--sonar); }
+.ccell.hl    { color: var(--text); }
+.ccell.red   { color: var(--red); }
+.ccell.green { color: var(--green); }
+
+/* WHY */
+.why { border-left: 2px solid var(--red); padding: 11px 14px; background: #080406; border-radius: 0 3px 3px 0; }
+.why-lbl { font-size: 8px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--red); margin-bottom: 5px; }
+.why p { font-size: 12px; color: #3A2040; line-height: 1.85; }
+.why p strong { color: #7A5060; font-weight: 500; }
+
+/* CALLOUT */
+.callout { border-radius: 3px; padding: 10px 13px; font-size: 12px; line-height: 1.75; display: flex; gap: 9px; align-items: flex-start; }
+.callout.info    { background: #030810; border: 1px solid #0C1A40; color: #60A5FA; }
+.callout.warn    { background: #100800; border: 1px solid #301E00; color: #D4A017; }
+.callout.danger  { background: #100404; border: 1px solid #300A0A; color: var(--red); }
+.callout.trivy   { background: #020A0E; border: 1px solid #0A2A30; color: var(--trivy); }
+.callout.chk     { background: #080420; border: 1px solid #1A0A50; color: var(--chk); }
+.callout.sonar   { background: #020A04; border: 1px solid #0A2A10; color: var(--sonar); }
+.cico { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
+
+/* SEVERITY PILLS */
+.sev { display: inline-block; font-size: 8px; letter-spacing: 0.1em; text-transform: uppercase; padding: 2px 6px; border-radius: 2px; font-weight: 600; }
+.sev.crit { background: #300808; color: #FF6B6B; border: 1px solid #500A0A; }
+.sev.high { background: #301808; color: #FFA726; border: 1px solid #503008; }
+.sev.med  { background: #302800; color: #FDD835; border: 1px solid #504000; }
+.sev.low  { background: #082010; color: #66BB6A; border: 1px solid #0A3018; }
+
+/* PIPELINE VISUAL */
+.pipeline { display: flex; align-items: center; gap: 0; flex-wrap: wrap; margin: 4px 0; }
+.pipe-step { padding: 8px 14px; font-size: 11px; border: 1px solid var(--border); background: var(--s2); color: var(--text); }
+.pipe-step.pass  { border-color: #0A3018; background: #041006; color: var(--green); }
+.pipe-step.fail  { border-color: #300808; background: #100404; color: var(--red); }
+.pipe-step.scan  { border-color: #0A2A30; background: #020A0E; color: var(--trivy); }
+.pipe-step.check { border-color: #1A0A50; background: #080420; color: var(--chk); }
+.pipe-step.sonar { border-color: #0A2A10; background: #020A04; color: var(--sonar); }
+.pipe-arr { color: var(--muted); padding: 0 4px; font-size: 14px; }
+
+/* FTREE */
+.ftree { background: var(--s1); border: 1px solid var(--border); border-radius: 3px; padding: 12px 14px; font-size: 11.5px; line-height: 2; }
+.ftree .dir  { color: #fff; font-weight: 500; }
+.ftree .yml  { color: #60A5FA; }
+.ftree .new  { color: var(--dim); font-style: italic; font-size: 10px; }
+.ftree .tf   { color: var(--chk); }
+.ftree .sh   { color: var(--yellow); }
+
+/* CHECKLIST */
+.chklist { display: flex; flex-direction: column; gap: 5px; }
+.chk { display: flex; align-items: flex-start; gap: 9px; font-size: 12px; color: #3A3460; line-height: 1.5; padding: 7px 12px; background: var(--s1); border: 1px solid var(--border); border-radius: 3px; }
+.chk .ci { color: var(--green); flex-shrink: 0; }
+.chk .ca { color: var(--red); flex-shrink: 0; }
+
+/* BOT NAV */
+.bot-nav { padding: 14px 36px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border); background: var(--s1); flex-shrink: 0; }
+.nbtn { display: flex; align-items: center; gap: 7px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; padding: 9px 18px; border: 1px solid var(--bord2); border-radius: 3px; background: transparent; color: var(--text); cursor: pointer; transition: all 0.15s; }
+.nbtn:hover { background: var(--s2); border-color: var(--muted); }
+.nbtn:disabled { opacity: 0.2; cursor: default; }
+.nbtn.primary { background: var(--red); border-color: var(--red); color: #fff; font-weight: 600; }
+.nbtn.primary:hover { background: #C62828; border-color: #C62828; }
+.step-lbl { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+<aside class="sidebar">
+  <div class="sb-head">
+    <div class="phase-dot">Phase 6</div>
+    <div class="sb-title">DevSecOps</div>
+    <div class="sb-pills">
+      <span class="pill week">Week 9–10</span>
+      <span class="pill trivy">Trivy</span>
+      <span class="pill chk">Checkov</span>
+      <span class="pill sonar">SonarQube</span>
+    </div>
+  </div>
+  <div class="prog-wrap">
+    <div class="prog-row"><span>progress</span><span id="prog-txt">0 / 11</span></div>
+    <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+  </div>
+  <nav class="nav-scroll" id="nav-scroll"></nav>
+</aside>
+
+<div class="main">
+  <div class="main-head" id="main-head"></div>
+  <div class="content" id="content"></div>
+  <div class="bot-nav">
+    <button class="nbtn" id="btn-prev" onclick="go(-1)">← prev</button>
+    <span class="step-lbl" id="step-lbl"></span>
+    <button class="nbtn primary" id="btn-next" onclick="go(1)">next →</button>
+  </div>
+</div>
+
+</div>
+<script>
+const STEPS = [
+
+// ── 0 ─────────────────────────────────────────────────────
+{
+  title:"What Phase 6 builds", sub:"overview",
+  eyebrow:"Phase 6 · Overview", headline:"DevSecOps",
+  desc:"Phases 1–5 built the platform. Phase 6 hardens it. DevSecOps means security is not a final step before release — it is built into every stage of the pipeline automatically. By the end, your pipeline blocks broken, insecure, or misconfigured code before it ever reaches the cluster.",
+  tags:["trivy","chk","sonar","concept"],
+  tag:"all",
+  chunks:[
+    {
+      dot:"concept", label:"What DevSecOps means — shift left security", badge:"concept", bt:"concept",
+      body:`<div class="analogy">
+  <div class="analogy-head sec">The shift left mental model</div>
+  <div class="analogy-body">
+    Traditional security: you build the whole thing, then a security team reviews it before release. Problems found late are expensive to fix — the code is already written, deployed, and integrated.<br><br>
+    <strong>Shift left</strong> means moving security checks as early as possible in the pipeline — to the left of the timeline. A CVE caught in the CI pipeline costs 5 minutes to fix. The same CVE caught in production after a breach costs careers.<br><br>
+    DevSecOps does not mean security engineers write the pipeline. It means developers build security gates into their own pipeline — automated, mandatory, impossible to skip.
+  </div>
+</div>`
+    },
+    {
+      dot:"all", label:"Where each tool fits in the pipeline", badge:"overview", bt:"concept",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">security gates in the CI pipeline</span></div><pre>
+git push
+  │
+  ▼
+<span class="cg">① SonarQube</span>          <span class="cm"># code quality + SAST (static analysis)</span>
+  scan source code     <span class="cm"># catches bugs, code smells, security hotspots</span>
+  fail on quality gate <span class="cm"># pipeline stops if quality score drops</span>
+  │
+  ▼
+<span class="co">② Trivy (filesystem)</span>  <span class="cm"># scan source + dependencies before build</span>
+  scan repo for known  <span class="cm"># catches CVEs in package.json, go.sum etc</span>
+  vulnerabilities      <span class="cm"># before wasting time building a bad image</span>
+  │
+  ▼
+docker build image
+  │
+  ▼
+<span class="co">③ Trivy (image)</span>        <span class="cm"># scan the built Docker image</span>
+  scan every layer     <span class="cm"># catches CVEs in base image + installed packages</span>
+  fail on CRITICAL     <span class="cm"># do not push broken images to ECR</span>
+  │
+  ▼
+push to ECR
+  │
+  ▼
+terraform plan
+  │
+  ▼
+<span class="cp">④ Checkov</span>             <span class="cm"># scan Terraform for misconfigurations</span>
+  scan .tf files       <span class="cm"># catches open ports, unencrypted storage, etc</span>
+  fail on HIGH/CRIT    <span class="cm"># do not apply dangerous infrastructure changes</span>
+  │
+  ▼
+terraform apply (if all gates pass)
+</pre></div>`,
+      why:"<strong>The order matters.</strong> Scan source before building — no point building a 5-minute Docker image if the dependencies have a CRITICAL CVE. Scan the image after building — the base image might introduce vulnerabilities your source scan missed. Scan Terraform separately, before apply. Each gate catches a different layer of the attack surface."
+    },
+    {
+      dot:"all", label:"What you will have at the end of Phase 6", badge:"overview", bt:"concept",
+      body:`<div class="ftree">
+devops-platform/
+├── <span class="dir">.github/workflows/</span>
+│   ├── <span class="yml">ci.yml</span>              <span class="new"># updated: adds Trivy + SonarQube gates</span>
+│   └── <span class="yml">infra.yml</span>           <span class="new"># new: Terraform plan + Checkov scan</span>
+├── <span class="dir">app/</span>
+│   └── <span class="sh">sonar-project.properties</span>  <span class="new"># SonarQube project config</span>
+└── <span class="dir">terraform/</span>
+    └── <span class="tf">.checkov.yaml</span>       <span class="new"># Checkov config + skip rules</span>
+</div>`
+    }
+  ]
+},
+
+// ── 1 ─────────────────────────────────────────────────────
+{
+  title:"What is a CVE — deep dive", sub:"security fundamentals",
+  eyebrow:"Step 1 — Deep Dive", headline:"CVEs, CVSS scores &amp; vulnerability scanning",
+  desc:"Before you configure any scanner you need to understand what you are scanning for, how vulnerabilities are classified, and what the numbers actually mean — otherwise you cannot make intelligent decisions about what to block and what to accept.",
+  tags:["concept","trivy"],
+  tag:"deep",
+  chunks:[
+    {
+      dot:"concept", label:"What a CVE is — the vulnerability identifier system", badge:"deep dive", bt:"deep",
+      body:`<div class="analogy">
+  <div class="analogy-head sec">Mental model — what CVE means</div>
+  <div class="analogy-body">
+    CVE stands for Common Vulnerabilities and Exposures. It is a public database (maintained by MITRE, funded by the US government) of every known security vulnerability in software. Every vulnerability gets a unique ID like <strong>CVE-2021-44228</strong> (Log4Shell).<br><br>
+    When a security researcher finds a bug in OpenSSL that allows remote code execution, they report it, it gets assigned a CVE number, and every scanner in the world — Trivy, Snyk, Dependabot — immediately knows about it and can flag any software that uses the affected version.<br><br>
+    <strong>Your Docker image is a collection of software packages.</strong> Every package has a version. Every version may have known CVEs. Trivy cross-references your packages against the CVE database and tells you exactly which ones are vulnerable.
+  </div>
+</div>`
+    },
+    {
+      dot:"concept", label:"CVSS scores — how severity is measured", badge:"deep dive", bt:"deep",
+      body:`<div class="prose">Every CVE gets a CVSS score (Common Vulnerability Scoring System) from 0 to 10. The score is calculated from factors like: can it be exploited remotely? Does it require authentication? Does it give the attacker full system control?</div>
+<div class="cmp">
+  <div class="crow c4 head">
+    <div class="ccell">Severity</div>
+    <div class="ccell">CVSS score</div>
+    <div class="ccell">What it means</div>
+    <div class="ccell">Pipeline action</div>
+  </div>
+  <div class="crow c4">
+    <div class="ccell red">CRITICAL</div>
+    <div class="ccell">9.0 – 10.0</div>
+    <div class="ccell">Remote code execution, no auth needed. Attacker owns your server.</div>
+    <div class="ccell red">Block deploy. Fix immediately.</div>
+  </div>
+  <div class="crow c4">
+    <div class="ccell" style="color:var(--yellow)">HIGH</div>
+    <div class="ccell">7.0 – 8.9</div>
+    <div class="ccell">Significant impact. May require some conditions to exploit.</div>
+    <div class="ccell" style="color:var(--yellow)">Block deploy. Fix within 24h.</div>
+  </div>
+  <div class="crow c4">
+    <div class="ccell" style="color:#FDD835">MEDIUM</div>
+    <div class="ccell">4.0 – 6.9</div>
+    <div class="ccell">Limited impact or requires specific conditions.</div>
+    <div class="ccell">Warn. Fix within 7 days.</div>
+  </div>
+  <div class="crow c4">
+    <div class="ccell green">LOW</div>
+    <div class="ccell">0.1 – 3.9</div>
+    <div class="ccell">Minimal impact. Usually theoretical.</div>
+    <div class="ccell">Log only. Fix in next sprint.</div>
+  </div>
+</div>`,
+      why:"<strong>Only block on CRITICAL and HIGH.</strong> If you block on MEDIUM and LOW, your pipeline will never pass — modern Docker images have dozens of low-severity CVEs in base packages that are not exploitable in your context. Being too strict means engineers learn to work around the scanner. Block on the ones that matter."
+    },
+    {
+      dot:"concept", label:"The difference between OS CVEs and library CVEs", badge:"concept", bt:"concept",
+      body:`<div class="cmp">
+  <div class="crow c2 head">
+    <div class="ccell">OS package CVEs</div>
+    <div class="ccell">Library CVEs</div>
+  </div>
+  <div class="crow c2">
+    <div class="ccell">In: libssl, glibc, curl installed by Alpine/Ubuntu</div>
+    <div class="ccell">In: npm packages, pip packages, go modules</div>
+  </div>
+  <div class="crow c2">
+    <div class="ccell">Fixed by: updating base image tag (e.g. node:20-alpine → newer digest)</div>
+    <div class="ccell">Fixed by: upgrading package version in package.json / go.mod</div>
+  </div>
+  <div class="crow c2">
+    <div class="ccell">Trivy scans: image layers</div>
+    <div class="ccell">Trivy scans: filesystem before build AND image layers</div>
+  </div>
+</div>
+<div class="callout trivy"><span class="cico">◈</span><div>Pinning your base image to a specific digest (<code>node:20-alpine@sha256:abc123</code>) prevents silent base image updates but also prevents silent security fixes. Use a digest in production but run Trivy weekly to catch newly disclosed CVEs against your pinned digest.</div></div>`
+    }
+  ]
+},
+
+// ── 2 ─────────────────────────────────────────────────────
+{
+  title:"Trivy — deep dive", sub:"container scanning",
+  eyebrow:"Step 2 — Deep Dive", headline:"Trivy from first principles",
+  desc:"Trivy is the most widely used open-source vulnerability scanner. It scans Docker images, filesystems, Git repos, Terraform, and Kubernetes manifests. Understanding what it actually scans and how to read its output lets you act on results instead of just passing flags.",
+  tags:["trivy","concept"],
+  tag:"deep",
+  chunks:[
+    {
+      dot:"trivy", label:"What Trivy scans and how it works", badge:"deep dive", bt:"deep",
+      body:`<div class="analogy">
+  <div class="analogy-head trivy">Mental model — how Trivy scans an image</div>
+  <div class="analogy-body">
+    A Docker image is a stack of layers. Each layer is a filesystem snapshot. Trivy extracts every layer, finds every installed package (OS packages via dpkg/apk, language packages via package-lock.json, go.sum, requirements.txt), and cross-references every package+version against multiple vulnerability databases:<br><br>
+    - <strong>NVD</strong> (National Vulnerability Database — the official CVE source)<br>
+    - <strong>GitHub Advisory Database</strong> (npm, PyPI, Go, Maven CVEs)<br>
+    - <strong>OS vendor advisories</strong> (Alpine, Debian, Ubuntu, RHEL)<br><br>
+    The result is a list of every package in your image that has a known CVE, with severity, a description of the vulnerability, and whether a fix is available.
+  </div>
+</div>`
+    },
+    {
+      dot:"trivy", label:"Reading Trivy output — what each field means", badge:"deep dive", bt:"deep",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">example trivy output — what to look at</span></div><pre>
+app:a3f9c12 (alpine 3.18.0)
+=================================
+Total: 3 (CRITICAL: 1, HIGH: 2)
+
+<span class="cf">┌─────────────────┬────────────────┬──────────┬────────────────────┬───────────────┐</span>
+<span class="cf">│ Library         │ Vulnerability  │ Severity │ Installed Version  │ Fixed Version │</span>
+<span class="cf">├─────────────────┼────────────────┼──────────┼────────────────────┼───────────────┤</span>
+<span class="cf">│ libssl3         │ CVE-2023-4807  │ CRITICAL │ 3.1.1-r1           │ 3.1.2-r0      │</span>  ← BLOCK
+<span class="cf">│ openssl         │ CVE-2023-3817  │ HIGH     │ 3.1.1-r1           │ 3.1.2-r0      │</span>  ← BLOCK
+<span class="cf">│ busybox         │ CVE-2022-48174 │ HIGH     │ 1.36.0-r0          │ 1.36.1-r0     │</span>  ← BLOCK
+
+<span class="cm"># What to do with each column:</span>
+<span class="cm"># Library        → the affected package</span>
+<span class="cm"># Vulnerability  → CVE ID — Google this to understand the actual risk</span>
+<span class="cm"># Severity       → CRITICAL/HIGH = must fix. MEDIUM/LOW = log and track.</span>
+<span class="cm"># Installed      → your current version</span>
+<span class="cm"># Fixed Version  → if blank, no fix exists yet → consider alternative package</span>
+</pre></div>`,
+      why:"<strong>Always check if a Fixed Version exists.</strong> If it does, the fix is to update the base image (Alpine releases security patches constantly). Pull a newer Alpine digest. If no fixed version exists, you need to decide: is this CVE actually exploitable in your runtime context? Sometimes the vulnerable code path is never called. Document your decision."
+    },
+    {
+      dot:"trivy", label:"Trivy scan modes — what each one catches", badge:"deep dive", bt:"deep",
+      body:`<div class="cmp">
+  <div class="crow c3 head">
+    <div class="ccell">Mode</div>
+    <div class="ccell">Command</div>
+    <div class="ccell">What it catches</div>
+  </div>
+  <div class="crow c3">
+    <div class="ccell trivy">image</div>
+    <div class="ccell"><code>trivy image app:tag</code></div>
+    <div class="ccell">OS packages + language deps inside built image layers</div>
+  </div>
+  <div class="crow c3">
+    <div class="ccell trivy">filesystem</div>
+    <div class="ccell"><code>trivy fs .</code></div>
+    <div class="ccell">Language deps in source dir (package.json, go.mod) before build</div>
+  </div>
+  <div class="crow c3">
+    <div class="ccell trivy">config</div>
+    <div class="ccell"><code>trivy config .</code></div>
+    <div class="ccell">Misconfigs in Dockerfile, k8s manifests, Terraform, Helm charts</div>
+  </div>
+  <div class="crow c3">
+    <div class="ccell trivy">repo</div>
+    <div class="ccell"><code>trivy repo URL</code></div>
+    <div class="ccell">Scans a remote git repo without cloning manually</div>
+  </div>
+  <div class="crow c3">
+    <div class="ccell trivy">k8s</div>
+    <div class="ccell"><code>trivy k8s cluster</code></div>
+    <div class="ccell">Scans live cluster — running images + RBAC + network policies</div>
+  </div>
+</div>`
+    },
+    {
+      dot:"trivy", label:"Ignoring false positives — .trivyignore file", badge:"concept", bt:"concept",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">app/.trivyignore</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Format: CVE-ID [expiry date] [reason]</span>
+<span class="cm"># Ignored CVEs still appear in output but don't fail the build</span>
+
+<span class="cm"># Example: CVE in a package we don't use the vulnerable code path of</span>
+CVE-2023-1234
+<span class="cm"># Reason: affected function is never called in our runtime</span>
+<span class="cm"># Reviewed by: joe@company.com on 2024-01-15</span>
+<span class="cm"># Expires: 2024-04-15 (re-evaluate quarterly)</span>
+
+<span class="cm"># Example: no fix available yet</span>
+CVE-2023-5678
+<span class="cm"># Reason: no fixed version available. Tracking upstream.</span>
+<span class="cm"># Ticket: INFRA-142</span>
+</pre></div>`,
+      why:"<strong>Every ignored CVE needs a documented reason and expiry date.</strong> .trivyignore without comments is a security debt that nobody can audit. Treat it like a waiver: someone responsible signed off on the risk, with a date to re-evaluate. This is what security teams audit."
+    }
+  ]
+},
+
+// ── 3 ─────────────────────────────────────────────────────
+{
+  title:"Checkov — deep dive", sub:"IaC scanning",
+  eyebrow:"Step 3 — Deep Dive", headline:"Checkov from first principles",
+  desc:"Checkov scans Infrastructure as Code — Terraform, Helm, Kubernetes manifests, Dockerfiles — for misconfigurations before they become production security incidents. A misconfigured S3 bucket caught by Checkov saves you from a data breach.",
+  tags:["chk","concept"],
+  tag:"deep",
+  chunks:[
+    {
+      dot:"chk", label:"What Checkov scans and what misconfigurations look like", badge:"deep dive", bt:"deep",
+      body:`<div class="analogy">
+  <div class="analogy-head chk">Mental model — what a misconfiguration is</div>
+  <div class="analogy-body">
+    A CVE is a bug in software someone else wrote. A misconfiguration is a bug in infrastructure you wrote. It is not a software vulnerability — it is you accidentally making your own system insecure.<br><br>
+    Examples of misconfigurations Checkov catches:<br>
+    - S3 bucket with <code>acl = "public-read"</code> → your private data is world-readable<br>
+    - Security group with <code>cidr_blocks = ["0.0.0.0/0"]</code> on port 22 → SSH open to internet<br>
+    - RDS with <code>publicly_accessible = true</code> → database reachable from anywhere<br>
+    - EKS cluster with <code>endpoint_public_access = true</code> and no CIDR restriction<br>
+    - CloudTrail disabled → no audit log of who did what in your AWS account<br><br>
+    <strong>These are the misconfigurations that cause 90% of cloud security incidents.</strong> Checkov knows 1000+ rules and catches them automatically before terraform apply.
+  </div>
+</div>`
+    },
+    {
+      dot:"chk", label:"Reading Checkov output — passes, failures, and check IDs", badge:"deep dive", bt:"deep",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">example checkov output</span></div><pre>
+Check: CKV_AWS_18: "Ensure the S3 bucket has access logging enabled"
+  PASSED for resource: aws_s3_bucket.terraform_state
+
+Check: CKV_AWS_145: "Ensure that S3 bucket has MFA delete enabled"
+  <span class="cf">FAILED</span> for resource: aws_s3_bucket.terraform_state
+  File: /terraform/modules/data/main.tf:5-20
+  Guide: https://docs.bridgecrew.io/docs/s3_16-enable-mfa-delete
+
+Check: CKV_AWS_23: "Ensure the ingress is not open to 0.0.0.0/0 on port 22"
+  <span class="cf">FAILED</span> for resource: aws_security_group.bastion
+  File: /terraform/modules/security-groups/main.tf:12-18
+
+<span class="cm"># Each check has:</span>
+<span class="cm"># CKV_AWS_XXX  → unique check ID (you use this to skip false positives)</span>
+<span class="cm"># Resource     → which Terraform resource failed</span>
+<span class="cm"># File + line  → exactly where in your code</span>
+<span class="cm"># Guide link   → why it matters and how to fix it</span>
+</pre></div>`,
+      why:"<strong>The check ID is how you skip false positives.</strong> Our bastion SG intentionally allows 22 — but only from our IP, not 0.0.0.0/0. Checkov doesn't know that, so it flags it. You add a skip comment directly in the Terraform code with a reason. This is auditable — the skip is in your codebase alongside the resource."
+    },
+    {
+      dot:"chk", label:"Skipping false positives in Terraform with inline comments", badge:"concept", bt:"concept",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terraform/modules/security-groups/main.tf — annotated skip</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+resource "aws_security_group" "bastion" {
+  name   = "\${var.project_name}-bastion-sg"
+  vpc_id = var.vpc_id
+
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = [var.my_ip]   <span class="cm"># restricted to admin IP, not 0.0.0.0/0</span>
+    description = "SSH from admin IP only"
+
+    <span class="cm">#checkov:skip=CKV_AWS_25:SSH restricted to admin IP via var.my_ip, not public</span>
+  }
+}
+</pre></div>
+<div class="callout chk"><span class="cico">◈</span><div>The <code>#checkov:skip=CKV_ID:reason</code> comment format is parsed by Checkov. The reason is mandatory for audit purposes. Without the reason, make it a team policy to reject the PR.</div></div>`
+    },
+    {
+      dot:"chk", label:"Checkov config file — fine-tune what to check", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terraform/.checkov.yaml</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Checkov configuration file</span>
+soft-fail: false          <span class="cm"># fail the pipeline on any failed check</span>
+framework:
+  - terraform
+  - dockerfile
+  - kubernetes
+
+<span class="cm"># Globally skip checks that don't apply to your environment</span>
+skip-check:
+  - CKV_AWS_117    <span class="cm"># Lambda inside VPC — we don't use Lambda</span>
+  - CKV_AWS_50    <span class="cm"># X-Ray tracing on Lambda — not applicable</span>
+
+<span class="cm"># Only fail on HIGH and CRITICAL severity</span>
+check:
+  - HIGH
+  - CRITICAL
+
+<span class="cm"># Output format for CI (easier to parse)</span>
+output: cli
+compact: true
+</pre></div>`
+    }
+  ]
+},
+
+// ── 4 ─────────────────────────────────────────────────────
+{
+  title:"SonarQube — deep dive", sub:"code quality",
+  eyebrow:"Step 4 — Deep Dive", headline:"SonarQube from first principles",
+  desc:"SonarQube is the code quality and SAST (Static Application Security Testing) gate in your pipeline. It catches bugs, code smells, security hotspots, and technical debt in your source code — before the code is ever run.",
+  tags:["sonar","concept"],
+  tag:"deep",
+  chunks:[
+    {
+      dot:"sonar", label:"What SonarQube does — three categories of findings", badge:"deep dive", bt:"deep",
+      body:`<div class="cmp">
+  <div class="crow c3 head">
+    <div class="ccell">Category</div>
+    <div class="ccell">What it catches</div>
+    <div class="ccell">Example</div>
+  </div>
+  <div class="crow c3">
+    <div class="ccell sonar">Bugs</div>
+    <div class="ccell">Code that will likely cause a runtime error</div>
+    <div class="ccell">Null pointer dereference, division by zero, unclosed streams</div>
+  </div>
+  <div class="crow c3">
+    <div class="ccell sonar">Vulnerabilities</div>
+    <div class="ccell">Security weaknesses in your own code (SAST)</div>
+    <div class="ccell">SQL injection risk, hardcoded password, weak crypto, XSS</div>
+  </div>
+  <div class="crow c3">
+    <div class="ccell sonar">Code Smells</div>
+    <div class="ccell">Maintainability issues that slow future development</div>
+    <div class="ccell">Functions too long, too many parameters, copy-pasted code</div>
+  </div>
+  <div class="crow c3">
+    <div class="ccell sonar">Security Hotspots</div>
+    <div class="ccell">Code that needs human review — not definitely vulnerable</div>
+    <div class="ccell">Use of Math.random() — might be fine, might be crypto misuse</div>
+  </div>
+  <div class="crow c3">
+    <div class="ccell sonar">Coverage</div>
+    <div class="ccell">What % of your code is covered by tests</div>
+    <div class="ccell">Fail if coverage drops below 80%</div>
+  </div>
+</div>`,
+      why:"SonarQube's SAST catches vulnerabilities in <strong>your own code</strong> — not in your dependencies (that's Trivy's job). It reads your source code statically — without running it — and applies thousands of rules. A rule like 'never use MD5 for password hashing' will flag <code>crypto.createHash('md5')</code> in your code even if you never call that function in tests."
+    },
+    {
+      dot:"sonar", label:"The Quality Gate — what blocks the pipeline", badge:"deep dive", bt:"deep",
+      body:`<div class="analogy">
+  <div class="analogy-head sonar">Mental model — what a Quality Gate is</div>
+  <div class="analogy-body">
+    A Quality Gate is a set of conditions that must all pass for the pipeline to continue. You define conditions like:<br><br>
+    - New code coverage ≥ 80%<br>
+    - New bugs = 0<br>
+    - New vulnerabilities = 0<br>
+    - New security hotspots reviewed<br>
+    - Duplicated lines on new code &lt; 3%<br><br>
+    <strong>It only evaluates NEW code</strong> — code changed in this PR. It does not fail you for existing technical debt in the codebase. This is important: you can adopt SonarQube on a legacy project without the pipeline immediately failing for old issues.
+  </div>
+</div>
+<div class="cw"><div class="cbar"><span class="cfile">quality gate outcome in CI</span></div><pre>
+SonarQube analysis complete:
+  New code coverage:    82% ✓   (threshold: 80%)
+  New bugs:             0  ✓
+  New vulnerabilities:  <span class="cf">1  ✗   (threshold: 0)</span>
+  New code smells:      3  ✓   (warning only)
+
+<span class="cf">Quality Gate: FAILED</span>
+<span class="cf">→ Pipeline blocked. Fix the new vulnerability before merging.</span>
+</pre></div>`
+    },
+    {
+      dot:"sonar", label:"SonarQube vs SonarCloud — which to use for your project", badge:"concept", bt:"concept",
+      body:`<div class="cmp">
+  <div class="crow c2 head">
+    <div class="ccell">SonarQube (self-hosted)</div>
+    <div class="ccell">SonarCloud (SaaS)</div>
+  </div>
+  <div class="crow c2">
+    <div class="ccell">You run it on your cluster</div>
+    <div class="ccell">Hosted by Sonar, free for public repos</div>
+  </div>
+  <div class="crow c2">
+    <div class="ccell">Full control, works for private code</div>
+    <div class="ccell">Zero setup, GitHub integration built in</div>
+  </div>
+  <div class="crow c2">
+    <div class="ccell sonar">Better for CV — shows you can operate it</div>
+    <div class="ccell">Better for speed — 10 min to set up</div>
+  </div>
+</div>
+<div class="callout sonar"><span class="cico">◈</span><div>For this project: use <strong>SonarCloud</strong> for speed and simplicity. It integrates with GitHub with 3 clicks and is free for public repos. If you want to show operational depth, add a SonarQube Helm deployment to your cluster in a bonus step.</div></div>`
+    }
+  ]
+},
+
+// ── 5 ─────────────────────────────────────────────────────
+{
+  title:"Add Trivy to the CI pipeline", sub:"image scanning",
+  eyebrow:"Step 5", headline:"Trivy in GitHub Actions",
+  desc:"Two Trivy scans in CI: one on the filesystem before the build (catches dependency CVEs fast), one on the built image before push (catches OS-level CVEs). Both block the pipeline on CRITICAL and HIGH.",
+  tags:["trivy","ci"],
+  tag:"trivy",
+  chunks:[
+    {
+      dot:"trivy", label:"Update .github/workflows/ci.yml — add Trivy scans", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">.github/workflows/ci.yml — add these jobs</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+jobs:
+  test:
+    <span class="cm"># ... existing test job ...</span>
+
+  trivy-fs-scan:
+    name: Trivy filesystem scan
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy on filesystem (catch dep CVEs before build)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: ./app
+          severity: CRITICAL,HIGH
+          exit-code: 1              <span class="cm"># fail pipeline if found</span>
+          ignore-unfixed: true      <span class="cm"># skip CVEs with no fix available</span>
+          format: sarif
+          output: trivy-fs.sarif
+
+      - name: Upload results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()               <span class="cm"># upload even if scan failed</span>
+        with:
+          sarif_file: trivy-fs.sarif
+
+  build-and-push:
+    name: Build and push image
+    runs-on: ubuntu-latest
+    needs: [test, trivy-fs-scan]   <span class="cm"># only builds if fs scan passes</span>
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      <span class="cm"># ... existing build steps ...</span>
+
+      - name: Run Trivy on built image (catch OS CVEs)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: image
+          image-ref: \${{ env.ECR_REPOSITORY }}:\${{ github.sha }}
+          severity: CRITICAL,HIGH
+          exit-code: 1
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-image.sarif
+
+      - name: Upload image scan to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: trivy-image.sarif
+
+      <span class="cm"># push to ECR only runs if image scan passes</span>
+      - name: Push to ECR
+        <span class="cm"># ... existing push step ...</span>
+</pre></div>`,
+      why:"<strong>Upload SARIF to GitHub Security tab.</strong> SARIF is a standard format for security scan results. GitHub renders it in the Security → Code Scanning tab — every vulnerability shows as an alert with the file, line, severity, and description. Your repo becomes a security dashboard without any extra tooling."
+    },
+    {
+      dot:"trivy", label:"Run Trivy locally before pushing", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal — local Trivy usage</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Install Trivy</span>
+brew install trivy           <span class="cm"># macOS</span>
+<span class="cm"># or</span>
+curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh
+
+<span class="cm"># Scan your built image</span>
+docker build -t app:local ./app
+trivy image app:local
+
+<span class="cm"># Scan only CRITICAL and HIGH, fail if found</span>
+trivy image --severity CRITICAL,HIGH --exit-code 1 app:local
+
+<span class="cm"># Scan filesystem (dependencies)</span>
+trivy fs --severity CRITICAL,HIGH ./app
+
+<span class="cm"># Scan Terraform configs for misconfigs</span>
+trivy config ./terraform
+
+<span class="cm"># Generate a full HTML report</span>
+trivy image --format template \
+  --template "@contrib/html.tpl" \
+  -o report.html app:local
+</pre></div>`
+    }
+  ]
+},
+
+// ── 6 ─────────────────────────────────────────────────────
+{
+  title:"Add Checkov to the Terraform pipeline", sub:"IaC scanning",
+  eyebrow:"Step 6", headline:"Checkov in GitHub Actions",
+  desc:"Checkov runs on every terraform plan — before apply. The infrastructure pipeline is separate from the app CI pipeline. It runs on pushes to the terraform/ directory.",
+  tags:["chk","ci"],
+  tag:"chk",
+  chunks:[
+    {
+      dot:"chk", label:"Create .github/workflows/infra.yml", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">.github/workflows/infra.yml</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+name: Infrastructure — Plan + Security Scan
+
+on:
+  push:
+    paths: [terraform/**]       <span class="cm"># only runs when terraform/ changes</span>
+  pull_request:
+    paths: [terraform/**]
+
+jobs:
+  checkov:
+    name: Checkov IaC scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Checkov on Terraform
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: terraform/
+          framework: terraform
+          soft_fail: false        <span class="cm"># fail pipeline on findings</span>
+          output_format: sarif
+          output_file_path: checkov.sarif
+          config_file: terraform/.checkov.yaml
+
+      - name: Upload results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: checkov.sarif
+
+  terraform-plan:
+    name: Terraform plan
+    runs-on: ubuntu-latest
+    needs: checkov               <span class="cm"># plan only runs if checkov passes</span>
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::\${{ vars.AWS_ACCOUNT_ID }}:role/devops-platform-github-role
+          aws-region: \${{ vars.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.7.0
+
+      - name: Terraform init
+        run: terraform init
+        working-directory: terraform/
+
+      - name: Terraform validate
+        run: terraform validate
+        working-directory: terraform/
+
+      - name: Terraform plan
+        run: terraform plan -out=tfplan -no-color
+        working-directory: terraform/
+
+      - name: Upload plan as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: terraform/tfplan
+          retention-days: 1
+</pre></div>`,
+      why:"<strong>Plan is in CI, apply is manual.</strong> The pipeline shows you the plan as an artifact but does not apply automatically. A senior engineer reviews the plan output before running <code>terraform apply</code>. This prevents surprises — accidental deletions, resource replacements — in production infrastructure."
+    }
+  ]
+},
+
+// ── 7 ─────────────────────────────────────────────────────
+{
+  title:"Add SonarCloud to the CI pipeline", sub:"code quality gate",
+  eyebrow:"Step 7", headline:"SonarCloud in GitHub Actions",
+  desc:"SonarCloud analyses your source code on every push and pull request. It posts the quality gate result back to GitHub — PRs cannot be merged if the quality gate fails.",
+  tags:["sonar","ci"],
+  tag:"sonar",
+  chunks:[
+    {
+      dot:"sonar", label:"Set up SonarCloud — 3 steps before writing any pipeline code", badge:"do this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">sonarcloud.io setup</span></div><pre>
+1. Go to sonarcloud.io → Log in with GitHub
+2. Click + → Analyze new project → Select your repo
+3. Choose: "With GitHub Actions" → copy the SONAR_TOKEN
+
+<span class="cm"># Add to GitHub repo secrets:</span>
+SONAR_TOKEN = &lt;the token from SonarCloud&gt;
+
+<span class="cm"># SonarCloud auto-detects your language and sets up the project.</span>
+<span class="cm"># You just need two files: sonar-project.properties and the workflow step.</span>
+</pre></div>`
+    },
+    {
+      dot:"sonar", label:"sonar-project.properties", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">app/sonar-project.properties</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+sonar.projectKey=YOUR_GITHUB_USERNAME_devops-platform
+sonar.organization=YOUR_GITHUB_USERNAME
+
+<span class="cm"># Source code location</span>
+sonar.sources=.
+sonar.exclusions=node_modules/**,coverage/**,**/*.test.js
+
+<span class="cm"># Test coverage report (generated by jest --coverage)</span>
+sonar.javascript.lcov.reportPaths=coverage/lcov.info
+
+<span class="cm"># Language</span>
+sonar.language=js
+
+<span class="cm"># Quality Gate — will use SonarCloud default unless you customize</span>
+</pre></div>`
+    },
+    {
+      dot:"sonar", label:"Add SonarCloud step to ci.yml", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">.github/workflows/ci.yml — add sonarcloud job</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+  sonarcloud:
+    name: SonarCloud analysis
+    runs-on: ubuntu-latest
+    needs: test                  <span class="cm"># needs test results + coverage</span>
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0         <span class="cm"># full history needed for blame info</span>
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install and run tests with coverage
+        run: |
+          npm ci
+          npm test -- --coverage
+        working-directory: app
+
+      - name: SonarCloud scan
+        uses: SonarSource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}  <span class="cm"># for PR comments</span>
+          SONAR_TOKEN:  \${{ secrets.SONAR_TOKEN }}
+        with:
+          projectBaseDir: app
+
+  build-and-push:
+    needs: [test, trivy-fs-scan, sonarcloud]  <span class="cm"># all three must pass</span>
+    <span class="cm"># ...</span>
+</pre></div>`,
+      why:"<strong><code>fetch-depth: 0</code> is required.</strong> SonarCloud uses git blame to attribute issues to specific commits and calculate new-code metrics. Without full history it cannot determine which issues are new vs old, breaking the Quality Gate logic."
+    }
+  ]
+},
+
+// ── 8 ─────────────────────────────────────────────────────
+{
+  title:"IAM least-privilege audit", sub:"aws security",
+  eyebrow:"Step 8", headline:"IAM least privilege",
+  desc:"Misconfigured IAM is the most common cause of cloud breaches. This step audits your existing IAM roles and tightens them to the minimum permissions actually needed.",
+  tags:["chk","concept"],
+  tag:"chk",
+  chunks:[
+    {
+      dot:"concept", label:"The principle of least privilege — what it means in practice", badge:"deep dive", bt:"deep",
+      body:`<div class="analogy">
+  <div class="analogy-head sec">Mental model — least privilege</div>
+  <div class="analogy-body">
+    Every IAM role should have exactly the permissions it needs to do its job — nothing more. A role that only needs to read from one S3 bucket should not have <code>s3:*</code> on <code>*</code>. If that role is compromised, the blast radius is one S3 bucket, not your entire AWS account.<br><br>
+    Most engineers start with broad permissions (<code>AdministratorAccess</code>, <code>AmazonEC2FullAccess</code>) because it 'just works', and never tighten them. This is how compromised EC2 instances become full account takeovers.<br><br>
+    <strong>The rule: grant the minimum permissions that make the task work, scoped to the minimum resource that task needs.</strong>
+  </div>
+</div>`
+    },
+    {
+      dot:"chk", label:"Tighten the EC2 role — replace managed policies with custom ones", badge:"write this", bt:"do",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terraform/modules/iam/main.tf — replace broad policies</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># BEFORE: broad managed policy</span>
+<span class="cf"># policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"</span>
+<span class="cm"># This allows read from ANY ECR repo in your account</span>
+
+<span class="cm"># AFTER: custom policy scoped to your specific repo</span>
+resource "<span class="ck">aws_iam_policy</span>" "<span class="cv">ecr_pull_specific</span>" {
+  name = "<span class="cs">\${var.project_name}-ecr-pull</span>"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = [
+        "ecr:GetDownloadUrlForLayer",
+        "ecr:BatchGetImage",
+        "ecr:BatchCheckLayerAvailability"
+      ]
+      Resource = "arn:aws:ecr:\${var.aws_region}:\${var.account_id}:repository/\${var.project_name}/*"
+      <span class="cm"># scoped to THIS project's repos only, not all ECR repos</span>
+    }, {
+      Effect   = "Allow"
+      Action   = ["ecr:GetAuthorizationToken"]
+      Resource = "*"    <span class="cm"># this one must be * — it's how ECR login works</span>
+    }]
+  })
+}
+
+<span class="cm"># Scoped CloudWatch — only write to this project's log groups</span>
+resource "<span class="ck">aws_iam_policy</span>" "<span class="cv">cloudwatch_scoped</span>" {
+  name = "<span class="cs">\${var.project_name}-cloudwatch</span>"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect   = "Allow"
+      Action   = [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ]
+      Resource = "arn:aws:logs:\${var.aws_region}:\${var.account_id}:log-group:/aws/\${var.project_name}/*"
+    }]
+  })
+}
+</pre></div>`,
+      why:"<strong>Scope Resource to the specific ARN, never to <code>*</code>.</strong> <code>\"Resource\": \"*\"</code> on <code>s3:GetObject</code> allows reading any object in any bucket in your account. <code>\"Resource\": \"arn:aws:s3:::my-bucket/*\"</code> limits it to one bucket. One line of Terraform, massive reduction in blast radius."
+    },
+    {
+      dot:"bash", label:"Use AWS IAM Access Analyzer to find over-permissioned roles", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Enable Access Analyzer (free in AWS)</span>
+aws accessanalyzer create-analyzer \
+  --analyzer-name devops-platform-analyzer \
+  --type ACCOUNT \
+  --region eu-central-1
+
+<span class="cm"># List findings (resources accessible from outside your account)</span>
+aws accessanalyzer list-findings \
+  --analyzer-name devops-platform-analyzer \
+  --region eu-central-1
+
+<span class="cm"># Generate least-privilege policy from actual CloudTrail usage</span>
+<span class="cm"># (shows you what permissions your role ACTUALLY used in the last 90 days)</span>
+aws iam generate-service-last-accessed-details \
+  --arn arn:aws:iam::\${ACCOUNT_ID}:role/devops-platform-ec2-role
+
+<span class="cm"># Use policy simulator to test a role's permissions</span>
+aws iam simulate-principal-policy \
+  --policy-source-arn arn:aws:iam::\${ACCOUNT_ID}:role/devops-platform-ec2-role \
+  --action-names s3:DeleteBucket \
+  --resource-arns "*"
+<span class="cm"># → implicitDeny: the role cannot delete S3 buckets. Good.</span>
+</pre></div>`
+    }
+  ]
+},
+
+// ── 9 ─────────────────────────────────────────────────────
+{
+  title:"Secrets management — no secrets in code", sub:"secrets",
+  eyebrow:"Step 9", headline:"Secrets management hardening",
+  desc:"Secrets in code, environment files, or Git history are a critical vulnerability. This step audits your current setup and ensures every secret is in AWS Secrets Manager, retrieved at runtime by IAM role — never stored in a file.",
+  tags:["concept","chk"],
+  tag:"all",
+  chunks:[
+    {
+      dot:"concept", label:"Where secrets should NOT be — common mistakes", badge:"deep dive", bt:"deep",
+      body:`<div class="cmp">
+  <div class="crow c2 head">
+    <div class="ccell red">Wrong — do not do this</div>
+    <div class="ccell green">Right — do this instead</div>
+  </div>
+  <div class="crow c2">
+    <div class="ccell">DB_PASSWORD=secret123 in .env</div>
+    <div class="ccell">Fetch from AWS Secrets Manager at runtime via IAM role</div>
+  </div>
+  <div class="crow c2">
+    <div class="ccell">Hardcoded API key in source code</div>
+    <div class="ccell">Environment variable injected from k8s Secret (from Secrets Manager)</div>
+  </div>
+  <div class="crow c2">
+    <div class="ccell">AWS access key in GitHub Secrets</div>
+    <div class="ccell">OIDC role assumption — no long-lived keys anywhere</div>
+  </div>
+  <div class="crow c2">
+    <div class="ccell">terraform.tfvars in git</div>
+    <div class="ccell">.gitignored tfvars, secrets from env vars in CI</div>
+  </div>
+</div>`
+    },
+    {
+      dot:"bash", label:"Scan your git history for accidentally committed secrets", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal — scan for leaked secrets in git history</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Install trufflehog — scans git history for secrets</span>
+brew install trufflehog   <span class="cm"># macOS</span>
+<span class="cm"># or</span>
+docker run --rm -v "$PWD:/repo" \
+  trufflesecurity/trufflehog:latest git file:///repo
+
+<span class="cm"># Scan your repo</span>
+trufflehog git file://. --only-verified
+
+<span class="cm"># If it finds secrets in git history:</span>
+<span class="cm"># 1. Rotate the secret IMMEDIATELY (assume it's compromised)</span>
+<span class="cm"># 2. Remove from history using BFG Repo Cleaner:</span>
+bfg --delete-files .env
+git reflog expire --expire=now --all
+git gc --prune=now --aggressive
+git push --force
+</pre></div>`,
+      why:"<strong>git history is permanent.</strong> Even if you delete a file with a secret and push a new commit, the secret is still visible in the old commit forever — unless you rewrite history. Assume any secret that touched git history is compromised and rotate it immediately."
+    },
+    {
+      dot:"concept", label:"Add detect-secrets pre-commit hook to prevent future leaks", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal — set up pre-commit secret detection</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Install pre-commit</span>
+pip install pre-commit
+
+<span class="cm"># Create .pre-commit-config.yaml in repo root</span>
+cat > .pre-commit-config.yaml << 'EOF'
+repos:
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.4.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+  - repo: https://github.com/antonbabenko/pre-commit-terraform
+    rev: v1.83.0
+    hooks:
+      - id: terraform_fmt
+      - id: terraform_validate
+      - id: terraform_checkov
+EOF
+
+<span class="cm"># Initialise</span>
+pre-commit install
+detect-secrets scan > .secrets.baseline
+
+<span class="cm"># Now every git commit runs these checks automatically</span>
+<span class="cm"># A commit with a secret pattern is rejected before it reaches GitHub</span>
+</pre></div>`,
+      why:"Pre-commit hooks run on the developer's machine before any code reaches GitHub. This is the earliest possible point to catch secrets — earlier than CI, earlier than code review. The baseline file records known false positives so legitimate patterns (like test fixtures) don't block commits."
+    }
+  ]
+},
+
+// ── 10 ────────────────────────────────────────────────────
+{
+  title:"Verify the complete security pipeline", sub:"verification",
+  eyebrow:"Step 10", headline:"End-to-end security verification",
+  desc:"Test every security gate: introduce a real CVE, a Terraform misconfiguration, and a code vulnerability — verify each one blocks the pipeline at the right stage.",
+  tags:["bash","trivy","chk","sonar"],
+  tag:"all",
+  chunks:[
+    {
+      dot:"trivy", label:"Test 1 — Trivy blocks a vulnerable image", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal — test Trivy gate</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Use a known-vulnerable base image to test the gate</span>
+cat > /tmp/Dockerfile.test << 'EOF'
+FROM node:14-alpine    # node:14 is EOL and has many CVEs
+COPY . .
+CMD ["node", "index.js"]
+EOF
+
+docker build -t test-vuln:latest -f /tmp/Dockerfile.test ./app
+
+<span class="cm"># Trivy should find CRITICAL/HIGH CVEs and exit non-zero</span>
+trivy image --severity CRITICAL,HIGH --exit-code 1 test-vuln:latest
+<span class="cm"># → Should FAIL with a list of CVEs</span>
+<span class="cm"># → echo $? should return 1 (failure)</span>
+
+<span class="cm"># Confirm your real image passes</span>
+trivy image --severity CRITICAL,HIGH --exit-code 1 app:local
+<span class="cm"># → Should PASS (node:20-alpine has far fewer CVEs)</span>
+</pre></div>`
+    },
+    {
+      dot:"chk", label:"Test 2 — Checkov blocks a Terraform misconfiguration", badge:"run this", bt:"run",
+      body:`<div class="cw"><div class="cbar"><span class="cfile">terminal — test Checkov gate</span><button class="copybtn" onclick="cp(this)">copy</button></div><pre>
+<span class="cm"># Add a deliberately misconfigured resource to test</span>
+cat > /tmp/test-bad.tf << 'EOF'
+resource "aws_s3_bucket" "bad" {
+  bucket = "test-bad-bucket"
+  acl    = "public-read"   # MISCONFIGURATION: public bucket
+}
+
+resource "aws_security_group" "bad" {
+  ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]   # MISCONFIGURATION: SSH open to world
+  }
+}
+EOF
+
+checkov -f /tmp/test-bad.tf --framework terraform
+<span class="cm"># → Should FAIL:
+# CKV_AWS_20: S3 bucket should not be publicly readable
+# CKV_AWS_23: Ingress should not be open to 0.0.0.0/0 on port 22</span>
+
+<span class="cm"># Confirm your real terraform passes</span>
+checkov -d terraform/ --config-file terraform/.checkov.yaml
+</pre></div>`
+    },
+    {
+      dot:"check", label:"Phase 6 verification checklist", badge:"verify", bt:"run",
+      body:`<div class="chklist">
+<div class="chk"><span class="ci">✓</span>Trivy filesystem scan runs before Docker build in CI</div>
+<div class="chk"><span class="ci">✓</span>Trivy image scan runs after build, before ECR push</div>
+<div class="chk"><span class="ci">✓</span>CRITICAL/HIGH CVE in base image blocks the pipeline (tested with node:14)</div>
+<div class="chk"><span class="ci">✓</span>Trivy results appear in GitHub Security → Code Scanning tab</div>
+<div class="chk"><span class="ci">✓</span>Checkov runs on every terraform/ change before terraform plan</div>
+<div class="chk"><span class="ci">✓</span>Intentional misconfiguration (public S3) is caught by Checkov</div>
+<div class="chk"><span class="ci">✓</span>Inline checkov:skip comments present with reasons for legitimate exceptions</div>
+<div class="chk"><span class="ci">✓</span>SonarCloud quality gate visible in GitHub PR checks</div>
+<div class="chk"><span class="ci">✓</span>trufflehog scan found no secrets in git history</div>
+<div class="chk"><span class="ci">✓</span>pre-commit hooks installed and reject a test file with a fake secret</div>
+<div class="chk"><span class="ci">✓</span>EC2 IAM roles scoped to specific resource ARNs, not wildcard *</div>
+</div>`
+    }
+  ]
+},
+
+// ── 11 ────────────────────────────────────────────────────
+{
+  title:"Phase 6 complete", sub:"summary & cv lines",
+  eyebrow:"Phase 6 · Done", headline:"What you built",
+  desc:"Phase 6 is complete. Your pipeline now has four automatic security gates — no human can skip them. Phase 7 is the final polish: architecture diagram, README, and the portfolio presentation.",
+  tags:["concept"],
+  tag:"all",
+  chunks:[
+    {
+      dot:"check", label:"CV bullet points from Phase 6", badge:"cv lines", bt:"cv",
+      body:`<div class="chklist">
+<div class="chk"><span class="ca">→</span>Integrated Trivy image scanning into CI pipeline — CRITICAL/HIGH CVEs block ECR push with SARIF results surfaced in GitHub Security tab</div>
+<div class="chk"><span class="ca">→</span>Implemented Checkov IaC security scanning on all Terraform changes — misconfigurations (public S3, open security groups) block terraform plan in CI</div>
+<div class="chk"><span class="ca">→</span>Configured SonarCloud quality gate — new vulnerabilities and coverage drops below 80% block PR merges automatically</div>
+<div class="chk"><span class="ca">→</span>Hardened IAM roles to least-privilege — replaced broad managed policies with custom policies scoped to specific resource ARNs</div>
+<div class="chk"><span class="ca">→</span>Implemented secrets hygiene: pre-commit detect-secrets hooks, trufflehog git history scan, all credentials managed via AWS Secrets Manager with IAM role access</div>
+</div>`
+    },
+    {
+      dot:"concept", label:"What Phase 7 adds — polish and portfolio presentation", badge:"next", bt:"concept",
+      body:`<div class="prose">Phase 7 is the final phase. It does not add new technology — it makes everything you built legible to an interviewer or hiring manager in 5 minutes.<br><br>You will produce: an <strong>architecture diagram</strong> in draw.io showing the full system with all components and traffic flows. A <strong>README</strong> structured as problem → solution → architecture → how to deploy → security → observability. A <strong>Loom walkthrough video</strong> (3 minutes, live demo). And a <strong>technical blog post</strong> on dev.to or Hashnode about one hard problem you solved — the GitOps setup, the OIDC authentication, or the Prometheus alerting.<br><br>The blog post is the most underrated part. It shows technical communication skill, which most engineers cannot demonstrate. Tell me <strong>"next phase"</strong> when you're ready.</div>`
+    }
+  ]
+}
+
+];
+
+let cur = 0;
+const done = new Set();
+
+function renderNav() {
+  document.getElementById('nav-scroll').innerHTML = STEPS.map((s,i) => `
+    <div class="nav-item ${i===cur?'active':''} ${done.has(i)?'done':''}" onclick="jump(${i})">
+      <div class="nn">${done.has(i)?'✓':i+1}</div>
+      <div class="nt">
+        <div class="ntitle">${s.title}</div>
+        <div class="nsub">${s.sub}</div>
+      </div>
+      <div class="ntag ${s.tag}">${s.tag}</div>
+    </div>
+  `).join('');
+  const pct = Math.round(done.size/STEPS.length*100);
+  document.getElementById('prog-fill').style.width=pct+'%';
+  document.getElementById('prog-txt').textContent=`${done.size} / ${STEPS.length}`;
+}
+
+function renderMain() {
+  const s = STEPS[cur];
+  document.getElementById('main-head').innerHTML=`
+    <div class="eyebrow">${s.eyebrow}</div>
+    <div class="headline">${s.headline}</div>
+    <div class="step-desc">${s.desc}</div>
+    <div class="tag-row">${s.tags.map(t=>`<span class="tag ${t}">${t}</span>`).join('')}</div>
+  `;
+  document.getElementById('content').innerHTML=s.chunks.map((c,ci)=>`
+    <div class="chunk ${ci===0?'open':''}" id="c${ci}">
+      <div class="chunk-head" onclick="tog(${ci})">
+        <div class="cdot ${c.dot}"></div>
+        <span class="clabel">${c.label}</span>
+        <span class="cbadge ${c.bt}">${c.badge}</span>
+        <span class="cchev">▼</span>
+      </div>
+      <div class="chunk-body">
+        ${c.body}
+        ${c.why?`<div class="why"><div class="why-lbl">why this matters</div><p>${c.why}</p></div>`:''}
+      </div>
+    </div>
+  `).join('');
+  document.getElementById('step-lbl').textContent=`step ${cur+1} of ${STEPS.length}`;
+  document.getElementById('btn-prev').disabled=cur===0;
+  document.getElementById('btn-next').textContent=cur===STEPS.length-1?'✓ done':'next →';
+}
+
+function tog(ci){document.getElementById(`c${ci}`).classList.toggle('open');}
+
+function go(dir){
+  if(dir===1&&cur<STEPS.length-1){done.add(cur);cur++;}
+  else if(dir===-1&&cur>0)cur--;
+  renderNav();renderMain();
+  document.querySelector('.main').scrollTop=0;
+}
+
+function jump(i){
+  if(i<cur)done.delete(i);
+  cur=i;renderNav();renderMain();
+}
+
+function cp(btn){
+  const pre=btn.closest('.cw').querySelector('pre');
+  navigator.clipboard.writeText(pre.innerText).then(()=>{
+    btn.textContent='copied!';btn.classList.add('ok');
+    setTimeout(()=>{btn.textContent='copy';btn.classList.remove('ok');},2000);
+  });
+}
+
+renderNav();renderMain();
+</script>
+</body>
+</html>

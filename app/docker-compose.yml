@@ -1,0 +1,15 @@
+ services:
+  app:
+    build:
+      context: .
+      target: production    # build the production stage locally too
+    ports:
+      - "8080:8080"
+    environment:
+      - NODE_ENV=production
+      - APP_VERSION=local
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
