@@ -2,6 +2,12 @@
 
 An end-to-end, highly available cloud-native platform deployed on AWS. This repository demonstrates a complete DevOps lifecycle, from Infrastructure as Code (IaC) to automated CI/CD pipelines, container orchestration, and GitOps continuous delivery.
 
+## 🗺️ Architecture
+
+![Architecture diagram: GitHub Actions builds and pushes to ECR via OIDC, then deploys over SSH through a bastion to an app EC2 instance in a private subnet, which talks to RDS Postgres in a data subnet](docs/architecture.svg)
+
+Traffic is bounded by security groups at every hop: the ALB accepts public HTTP/HTTPS, the app server only accepts traffic from the ALB and the bastion, and RDS only accepts traffic from the app server. The app server and database sit in private/data subnets with no direct internet inbound.
+
 ## 🏗️ Architecture & Tech Stack
 
 - **Cloud Provider:** AWS

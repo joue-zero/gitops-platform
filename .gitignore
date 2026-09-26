@@ -8,6 +8,7 @@
 crash.log
 override.tf
 *.tfplan
+tfplan
 # SSH keys — never ever commit
 *.pem
 *.key
