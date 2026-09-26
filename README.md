@@ -108,3 +108,14 @@ The deploy job needs one additional repository secret beyond `ECR_REPOSITORY_URL
 
 - `BASTION_SSH_PRIVATE_KEY` — the private half of the `gitops-platform` key pair registered in the `iam` module, used to SSH-proxy through the bastion to the private app server.
 
+### Terraform Pipeline
+
+A second workflow ([`terraform.yml`](.github/workflows/terraform.yml)) plans and applies infrastructure changes:
+
+- **Any PR touching `terraform/**`** runs `terraform plan` using a **read-only** OIDC role (`gitops-platform-tf-plan-role`) and posts the plan as a PR comment — safe even on a PR from a fork, since it can't change anything.
+- **A push to `main`** re-runs that same read-only plan, uploads it as an artifact, then a second job downloads it and runs `terraform apply` on the *exact* reviewed plan using a separate, more privileged OIDC role (`gitops-platform-tf-apply-role`). That job targets the `dev` GitHub Environment, which requires manual approval before it's allowed to run — merging to `main` never silently changes infrastructure.
+
+### Branching Strategy
+
+Trunk-based, not GitFlow: one long-lived `main` branch, short-lived feature branches merged via PR. Environments are promotion targets gated by required reviewers on a GitHub Environment (`dev` today; `prod` the same way once it exists), not separate long-lived branches — this matches the GitOps direction the later phases (ArgoCD) are already headed in.
+
