@@ -1,0 +1,4 @@
+---
+aws_region: eu-central-1
+image_tag: latest
+app_port: 8080
