@@ -44,6 +44,7 @@ This project is being developed in iterative phases to mimic a real-world enterp
 
 - [x] **Phase 1:** AWS Infrastructure Foundation (Terraform)
 - [x] **Phase 2:** Containerization & Continuous Integration (Docker, GH Actions, ECR)
+- [x] **Phase 2.5:** Ephemeral Dev Environment (foundation/environment state split, on-demand + scheduled destroy)
 - [ ] **Phase 3:** Kubernetes on EKS (Provisioning cluster, deploying via Helm)
 - [ ] **Phase 4:** GitOps Continuous Delivery (Decoupling CI/CD with ArgoCD)
 - [ ] **Phase 5:** Observability Stack (Metrics and log aggregation via Prometheus/Grafana)
@@ -65,16 +66,20 @@ This project is being developed in iterative phases to mimic a real-world enterp
 │   └── ...
 └── terraform/
     ├── environments/
-    │   └── dev/                  # Sole environment entry point (calls the shared modules)
+    │   ├── foundation/           # Persistent: OIDC, CI roles, ECR. Applied once, manually.
+    │   └── dev/                  # Ephemeral: VPC, compute, RDS. Destroyed/recreated freely.
     └── modules/
+        ├── foundation-iam/       # OIDC provider, CI roles (github, tf-plan, tf-apply)
+        ├── ecr/                  # App image registry
+        ├── compute-iam/          # SSH key pair, EC2 instance role
         ├── compute/              # Bastion, App instances, ALB
-        ├── data/                 # RDS Postgres, ECR
+        ├── data/                 # RDS Postgres
         ├── networking/           # VPC, Subnets, IGW, NAT
         └── security-groups/      # Stateful firewall rules
 
 ```
 
-`terraform/environments/dev` is the only environment wired up right now — run all Terraform commands from there. A `prod` environment will be added the same way (reusing the shared modules) when it's actually needed.
+Two Terraform states, on purpose: `foundation` holds what CI itself depends on to run — if it lived in the same state as the ephemeral environment, destroying the environment would delete the very roles needed to bring it back. `dev` is the only environment wired up beyond that; a `prod` environment would be added the same way (reusing the shared modules) when it's actually needed.
 
 ---
 
@@ -82,18 +87,21 @@ This project is being developed in iterative phases to mimic a real-world enterp
 
 ### Infrastructure Deployment
 
-The infrastructure is modular and managed via Terraform.
+The infrastructure is modular and managed via Terraform, split across two states.
 
-1. Ensure AWS CLI is configured with the appropriate profile.
-2. Initialize the backend:
+**1. Foundation — once, manually, before anything else:**
+```bash
+cd terraform/environments/foundation
+terraform init
+terraform plan -out=tfplan
+terraform apply tfplan
+```
+This creates the GitHub OIDC provider, the three CI roles, and the ECR repo. It's applied by hand (not via CI) since CI's own permission to run Terraform comes from the roles this step creates.
+
+**2. Dev environment — as often as you like:**
 ```bash
 cd terraform/environments/dev
 terraform init
-```
-
-
-3. Review and apply the infrastructure:
-```bash
 terraform plan -out=tfplan
 terraform apply tfplan
 ```
@@ -106,14 +114,26 @@ The GitHub Actions workflow triggers automatically on pushes and pull requests t
 
 The deploy job needs one additional repository secret beyond `ECR_REPOSITORY_URL` and `AWS_ACCOUNT_ID`:
 
-- `BASTION_SSH_PRIVATE_KEY` — the private half of the `gitops-platform` key pair registered in the `iam` module, used to SSH-proxy through the bastion to the private app server.
+- `BASTION_SSH_PRIVATE_KEY` — the private half of the `gitops-platform` key pair registered in the `compute-iam` module, used to SSH-proxy through the bastion to the private app server.
 
 ### Terraform Pipeline
 
 A second workflow ([`terraform.yml`](.github/workflows/terraform.yml)) plans and applies infrastructure changes:
 
-- **Any PR touching `terraform/**`** runs `terraform plan` using a **read-only** OIDC role (`gitops-platform-tf-plan-role`) and posts the plan as a PR comment — safe even on a PR from a fork, since it can't change anything.
+- **Any PR touching the `dev` environment or the modules it uses** runs `terraform plan` using a **read-only** OIDC role (`gitops-platform-tf-plan-role`) and posts the plan as a PR comment — safe even on a PR from a fork, since it can't change anything. Changes to `foundation` are applied manually (see below) and aren't part of this pipeline.
 - **A push to `main`** re-runs that same read-only plan, uploads it as an artifact, then a second job downloads it and runs `terraform apply` on the *exact* reviewed plan using a separate, more privileged OIDC role (`gitops-platform-tf-apply-role`). That job targets the `dev` GitHub Environment, which requires manual approval before it's allowed to run — merging to `main` never silently changes infrastructure.
+
+### Ephemeral Dev Environment
+
+This is a learning project — there's no reason to pay for a VPC/NAT/ALB/RDS that sits idle. The `dev` environment (network, compute, database) is designed to be destroyed and recreated on demand, while `foundation` (CI roles, ECR) stays up permanently so tearing `dev` down never breaks the pipeline.
+
+Three ways it gets torn down or spun up:
+
+- **On demand** — [`terraform-manage.yml`](.github/workflows/terraform-manage.yml), a `workflow_dispatch` workflow. From the Actions tab, run it and pick `apply` or `destroy`. Gated behind the same `dev` environment approval as everything else.
+- **Automatically on merge** — the existing Terraform pipeline (above) applies on every push to `main`, so merging a change brings the environment up if it's down.
+- **Automatically every night** — [`terraform-nightly-destroy.yml`](.github/workflows/terraform-nightly-destroy.yml) tears it down on a schedule, **unattended, without the approval gate** — that's deliberate: a safety net for forgetting only works if it doesn't wait for you to approve it. It no-ops harmlessly if the environment's already down.
+
+Caveat worth knowing: RDS is created with `skip_final_snapshot = true`, so **every teardown deletes the database with no backup**. Fine for a learning environment with disposable data; not a pattern to carry into anything real.
 
 ### Branching Strategy
 

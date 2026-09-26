@@ -1,0 +1,48 @@
+name: Terraform — Nightly Auto-Destroy
+
+# Safety net for "I forgot to tear it down": destroys the dev
+# environment every night, unattended and unapproved by design — if
+# it required the same approval gate as apply, it wouldn't help when
+# you're the one who forgot. Runs fine (no-op) if already destroyed.
+#
+# RDS has skip_final_snapshot = true, so any data in the dev database
+# is lost on every run of this workflow. That's expected for a
+# learning environment, not a production one.
+on:
+  schedule:
+    - cron: '0 22 * * *' # 22:00 UTC daily
+  workflow_dispatch: {} # manual trigger, for testing this workflow itself
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  TF_WORKING_DIR: terraform/environments/dev
+
+jobs:
+  destroy:
+    name: Terraform Destroy
+    runs-on: ubuntu-latest
+    if: github.repository == 'joue-zero/gitops-platform'
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/gitops-platform-tf-apply-role
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init -input=false
+
+      - name: Terraform Destroy
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform destroy -auto-approve -input=false
