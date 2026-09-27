@@ -25,3 +25,11 @@ output "db_endpoint" {
 output "db_credentials_secret_arn" {
   value = module.data.db_credentials_secret_arn
 }
+
+output "github_actions_tf_plan_role_arn" {
+  value = module.iam.github_actions_tf_plan_role_arn
+}
+
+output "github_actions_tf_apply_role_arn" {
+  value = module.iam.github_actions_tf_apply_role_arn
+}
