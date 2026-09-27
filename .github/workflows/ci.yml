@@ -117,7 +117,16 @@ jobs:
         run: pipx install --include-deps ansible
 
       - name: Install boto3/botocore (required by the aws_ec2 inventory plugin)
-        run: pipx inject ansible boto3 botocore
+        run: |
+          # `pipx inject ansible` isn't reliable here: this runner image
+          # ships a separate pre-installed ansible-core pipx venv, and
+          # that's the interpreter actually used at runtime — injecting
+          # into the "ansible" venv we just installed doesn't reach it.
+          # Find whichever interpreter ansible-playbook actually uses
+          # and pip-install straight into it instead of guessing a name.
+          ANSIBLE_PYTHON=$(ansible --version | grep 'python version' | sed -E 's/.*\(([^)]+)\)[^)]*$/\1/')
+          echo "ansible's python interpreter: $ANSIBLE_PYTHON"
+          "$ANSIBLE_PYTHON" -m pip install boto3 botocore
 
       - name: Install amazon.aws collection (EC2 dynamic inventory)
         run: ansible-galaxy collection install amazon.aws
