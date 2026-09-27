@@ -1,5 +1,6 @@
 plugin: amazon.aws.aws_ec2
-boto_profile: sofa
+# No hardcoded profile — CI authenticates via OIDC-assumed credentials
+# in the ambient environment. Locally, set AWS_PROFILE=sofa in your shell.
 regions:
   - eu-central-1
 filters:
