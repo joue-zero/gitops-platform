@@ -112,6 +112,9 @@ jobs:
       - name: Install Ansible
         run: pipx install --include-deps ansible
 
+      - name: Install boto3/botocore (required by the aws_ec2 inventory plugin)
+        run: pipx inject ansible boto3 botocore
+
       - name: Install amazon.aws collection (EC2 dynamic inventory)
         run: ansible-galaxy collection install amazon.aws
 
@@ -119,6 +122,13 @@ jobs:
         run: |
           install -m 600 -D /dev/null ~/.ssh/gitops-platform
           echo "${{ secrets.BASTION_SSH_PRIVATE_KEY }}" > ~/.ssh/gitops-platform
+
+      - name: Verify inventory actually resolves app servers
+        working-directory: ansible
+        run: |
+          count=$(ansible-inventory --list | python3 -c "import json,sys; print(len(json.load(sys.stdin).get('app_server', {}).get('hosts', [])))")
+          echo "Found $count app_server host(s)"
+          test "$count" -gt 0
 
       - name: Run deploy playbook
         working-directory: ansible
