@@ -10,7 +10,7 @@ name: Terraform — Nightly Auto-Destroy
 # learning environment, not a production one.
 on:
   schedule:
-    - cron: '0 22 * * *' # 22:00 UTC daily
+    - cron: '0 17 * * *' # TEMP: 20:00 EEST test run — revert to 22:00 UTC after
   workflow_dispatch: {} # manual trigger, for testing this workflow itself
 
 env:
