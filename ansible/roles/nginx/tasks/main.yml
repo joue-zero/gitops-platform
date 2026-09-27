@@ -24,3 +24,13 @@
     dest: /etc/nginx/sites-enabled/app
     state: link
   notify: restart nginx
+
+# Ubuntu's stock default site has `listen 80 default_server;`, which
+# wins as the fallback for any request whose Host header matches no
+# server_name -- exactly the ALB's health check. Without removing it,
+# our site (server_name _, no default_server flag) never gets hit.
+- name: Disable default Nginx site
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: restart nginx
