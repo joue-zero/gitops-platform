@@ -2,7 +2,11 @@ project_name        = "gitops-platform"
 aws_region          = "eu-central-1"
 environment         = "dev"
 vpc_cidr            = "10.0.0.0/16"
-ssh_public_key_path = "~/.ssh/gitops-platform.pub"
+# .tfvars files can't call file(), so this needs the actual key
+# contents, not a path. Either paste it here, or leave this out and
+# pass it at apply time instead:
+#   terraform apply -var="ssh_public_key=$(cat ~/.ssh/gitops-platform.pub)"
+ssh_public_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5... your-key-here"
 
 # Your public IP for bastion SSH access — run `curl ifconfig.me` and append /32.
 # Never set this to 0.0.0.0/0.

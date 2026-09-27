@@ -1,6 +1,6 @@
 resource "aws_key_pair" "deployer" {
   key_name   = "${var.project_name}-key"
-  public_key = file(var.ssh_public_key_path)
+  public_key = var.ssh_public_key
 }
 
 data "aws_iam_policy_document" "ec2_assume" {

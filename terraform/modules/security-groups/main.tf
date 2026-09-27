@@ -1,8 +1,3 @@
-# 1. Fetch your current public IP
-data "http" "my_ip" {
-  url = "http://ipv4.icanhazip.com"
-}
-
 resource "aws_security_group" "bastion" {
   name        = "${var.project_name}-bastion-sg"
   description = "SSH access to bastion host"
@@ -12,8 +7,7 @@ resource "aws_security_group" "bastion" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    # cidr_blocks = [var.my_ip]
-    cidr_blocks = ["${chomp(data.http.my_ip.response_body)}/32"]
+    cidr_blocks = [var.my_ip]
     description = "SSH from admin IP only"
   }
 
