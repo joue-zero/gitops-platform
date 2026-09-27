@@ -14,22 +14,10 @@ output "alb_dns_name" {
   value = module.compute.alb_dns_name
 }
 
-output "ecr_repository_url" {
-  value = module.data.ecr_repository_url
-}
-
 output "db_endpoint" {
   value = module.data.db_endpoint
 }
 
 output "db_credentials_secret_arn" {
   value = module.data.db_credentials_secret_arn
-}
-
-output "github_actions_tf_plan_role_arn" {
-  value = module.iam.github_actions_tf_plan_role_arn
-}
-
-output "github_actions_tf_apply_role_arn" {
-  value = module.iam.github_actions_tf_apply_role_arn
 }

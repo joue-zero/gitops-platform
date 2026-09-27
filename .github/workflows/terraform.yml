@@ -4,12 +4,22 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - 'terraform/**'
+      - 'terraform/environments/dev/**'
+      - 'terraform/modules/networking/**'
+      - 'terraform/modules/security-groups/**'
+      - 'terraform/modules/compute/**'
+      - 'terraform/modules/compute-iam/**'
+      - 'terraform/modules/data/**'
       - '.github/workflows/terraform.yml'
   push:
     branches: [main]
     paths:
-      - 'terraform/**'
+      - 'terraform/environments/dev/**'
+      - 'terraform/modules/networking/**'
+      - 'terraform/modules/security-groups/**'
+      - 'terraform/modules/compute/**'
+      - 'terraform/modules/compute-iam/**'
+      - 'terraform/modules/data/**'
       - '.github/workflows/terraform.yml'
 
 env:

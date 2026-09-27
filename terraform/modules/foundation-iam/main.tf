@@ -1,44 +1,16 @@
-resource "aws_key_pair" "deployer" {
-  key_name   = "${var.project_name}-key"
-  public_key = file(var.ssh_public_key_path)
-}
-
-data "aws_iam_policy_document" "ec2_assume" {
-  statement {
-    actions = ["sts:AssumeRole"]
-    principals {
-      type        = "Service"
-      identifiers = ["ec2.amazonaws.com"]
-    }
-  }
-}
-
-resource "aws_iam_role" "ec2" {
-  name               = "${var.project_name}-ec2-role"
-  assume_role_policy = data.aws_iam_policy_document.ec2_assume.json
-}
-
-resource "aws_iam_role_policy_attachment" "ecr_read" {
-  role       = aws_iam_role.ec2.name
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-}
-
-resource "aws_iam_role_policy_attachment" "cloudwatch" {
-  role       = aws_iam_role.ec2.name
-  policy_arn = "arn:aws:iam::aws:policy/CloudWatchAgentServerPolicy"
-}
-
-resource "aws_iam_instance_profile" "ec2" {
-  name = "${var.project_name}-ec2-profile"
-  role = aws_iam_role.ec2.name
-}
-
+# Account-wide singleton — AWS allows only one OIDC provider per URL
+# per account. This, and every role below, is foundation: it must
+# survive `terraform destroy` on the ephemeral dev environment, since
+# the CI roles are what bring the environment back up.
 resource "aws_iam_openid_connect_provider" "github" {
   url             = "https://token.actions.githubusercontent.com"
   client_id_list  = ["sts.amazonaws.com"]
   thumbprint_list = ["6938fd4d98bab03faadb97b34396831e3780aea1"]
 }
 
+data "aws_caller_identity" "current" {}
+
+# ── CI: push app images to ECR ────────────────────────────
 data "aws_iam_policy_document" "github_assume" {
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
@@ -64,10 +36,8 @@ resource "aws_iam_role_policy_attachment" "ecr_push" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryPowerUser"
 }
 
-# ── Terraform CI: plan (PRs + pre-apply plan on push) ─────
+# ── CI: terraform plan (PRs + pre-apply plan on push) ─────
 # Read-only — safe to run on any PR, including from forks.
-data "aws_caller_identity" "current" {}
-
 data "aws_iam_policy_document" "github_assume_tf_plan" {
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
@@ -115,8 +85,11 @@ resource "aws_iam_role_policy" "tf_plan_state_lock" {
   policy = data.aws_iam_policy_document.tf_state_lock.json
 }
 
-# ── Terraform CI: apply (push to main only, gated by the
+# ── CI: terraform apply (push to main only, gated by the
 #    "dev" GitHub Environment's required reviewer) ─────────
+# Only ever applies the dev environment's state (networking, compute,
+# RDS) — it never touches this foundation state, so it doesn't need
+# permission to modify its own OIDC provider or roles.
 data "aws_iam_policy_document" "github_assume_tf_apply" {
   statement {
     actions = ["sts:AssumeRoleWithWebIdentity"]
@@ -137,19 +110,15 @@ resource "aws_iam_role" "github_actions_tf_apply" {
   assume_role_policy = data.aws_iam_policy_document.github_assume_tf_apply.json
 }
 
-# Broad by necessity — this project's own IAM/OIDC resources are
-# themselves managed by this Terraform config, so the apply role
-# needs IAM permissions too. That's real privilege-escalation risk;
-# the mitigation here is the required-reviewer gate on the "dev"
-# environment, not fine-grained IAM scoping. Worth tightening if
-# this ever became more than a portfolio project.
+# Still needs IAM permissions: the dev environment creates its own
+# ec2 instance role/profile (see the compute-iam module). Scoped to
+# the services the dev environment actually uses, not account admin.
 resource "aws_iam_role_policy_attachment" "tf_apply" {
   for_each = toset([
     "arn:aws:iam::aws:policy/AmazonVPCFullAccess",
     "arn:aws:iam::aws:policy/AmazonEC2FullAccess",
     "arn:aws:iam::aws:policy/ElasticLoadBalancingFullAccess",
     "arn:aws:iam::aws:policy/AmazonRDSFullAccess",
-    "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess",
     "arn:aws:iam::aws:policy/IAMFullAccess",
     "arn:aws:iam::aws:policy/AmazonS3FullAccess",
   ])

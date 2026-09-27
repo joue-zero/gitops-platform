@@ -15,8 +15,8 @@ module "security_groups" {
   my_ip        = var.my_ip
 }
 
-module "iam" {
-  source              = "../../modules/iam"
+module "compute_iam" {
+  source              = "../../modules/compute-iam"
   project_name        = var.project_name
   ssh_public_key_path = var.ssh_public_key_path
 }
@@ -31,8 +31,8 @@ module "compute" {
   bastion_sg_id        = module.security_groups.bastion_sg_id
   app_sg_id            = module.security_groups.app_sg_id
   alb_sg_id            = module.security_groups.alb_sg_id
-  key_pair_name        = module.iam.key_pair_name
-  ec2_instance_profile = module.iam.ec2_instance_profile_name
+  key_pair_name        = module.compute_iam.key_pair_name
+  ec2_instance_profile = module.compute_iam.ec2_instance_profile_name
 }
 
 module "data" {

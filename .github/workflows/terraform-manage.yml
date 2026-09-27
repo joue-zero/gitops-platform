@@ -1,0 +1,55 @@
+name: Terraform — Manual Up / Down
+
+# On-demand spin-up or teardown of the dev environment (VPC, compute,
+# RDS) — for a learning project you don't want billing you 24/7.
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'apply (spin up) or destroy (tear down) the dev environment'
+        required: true
+        type: choice
+        options: [apply, destroy]
+
+env:
+  AWS_REGION: ${{ vars.AWS_REGION }}
+  TF_WORKING_DIR: terraform/environments/dev
+
+jobs:
+  run:
+    name: Terraform ${{ inputs.action }}
+    runs-on: ubuntu-latest
+    # Gated: requires manual approval in repo settings, same as the
+    # auto-apply-on-push pipeline — this includes destroy, so a
+    # mis-click on the dropdown still needs a second confirmation.
+    environment: dev
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/gitops-platform-tf-apply-role
+          aws-region: ${{ env.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_wrapper: false
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init -input=false
+
+      - name: Terraform Apply
+        if: inputs.action == 'apply'
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform apply -auto-approve -input=false
+
+      - name: Terraform Destroy
+        if: inputs.action == 'destroy'
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform destroy -auto-approve -input=false
