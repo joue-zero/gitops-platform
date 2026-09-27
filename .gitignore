@@ -1,9 +1,10 @@
 # Terraform
 .terraform/
-.terraform.lock.hcl         # commit this one actually (lock file)
+# .terraform.lock.hcl is intentionally NOT listed here — commit it (lock file)
 *.tfstate
 *.tfstate.backup
-*.tfvars                    # contains real values, keep local
+# contains real values, keep local
+*.tfvars
 *.tfvars.json
 crash.log
 override.tf
@@ -17,7 +18,8 @@ id_ed25519*
 
 # Ansible
 *.retry
-inventory/hosts             # generated file, not source
+# generated file, not source
+inventory/hosts
 
 # OS
 .DS_Store

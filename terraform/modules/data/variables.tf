@@ -22,7 +22,7 @@ variable "db_username" {
 
 variable "db_engine_version" {
   type    = string
-  default = "16.4"
+  default = "16.10" # 16.4 was removed from AWS's available versions
 }
 
 variable "db_instance_class" {

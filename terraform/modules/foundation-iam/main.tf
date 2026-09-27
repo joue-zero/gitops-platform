@@ -100,7 +100,16 @@ data "aws_iam_policy_document" "github_assume_tf_apply" {
     condition {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:joue-zero/gitops-platform:ref:refs/heads/main"]
+      # A job with `environment: dev` (the gated apply/manual-dispatch
+      # jobs) gets an environment-scoped sub claim, not a ref-scoped
+      # one — GitHub swaps it the moment a job targets a protected
+      # Environment. The nightly-destroy job deliberately has no
+      # `environment:` (it must run unattended), so it still presents
+      # the plain ref-based sub. Both need to be accepted here.
+      values = [
+        "repo:joue-zero/gitops-platform:ref:refs/heads/main",
+        "repo:joue-zero/gitops-platform:environment:dev",
+      ]
     }
   }
 }

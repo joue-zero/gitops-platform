@@ -87,7 +87,10 @@ Two Terraform states, on purpose: `foundation` holds what CI itself depends on t
 
 ### Infrastructure Deployment
 
-The infrastructure is modular and managed via Terraform, split across two states.
+The infrastructure is modular and managed via Terraform, split across two states. Neither config hardcodes an AWS profile (CI authenticates via OIDC-assumed credentials in its environment, not a named profile), so for local runs set one yourself first:
+```bash
+export AWS_PROFILE=sofa
+```
 
 **1. Foundation — once, manually, before anything else:**
 ```bash
