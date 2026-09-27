@@ -7,3 +7,4 @@
     - ../roles/common
     - ../roles/docker
     - ../roles/nginx
+    - ../roles/app-deploy

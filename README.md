@@ -34,7 +34,7 @@ Architected a resilient, multi-tier AWS network topology using decoupled Terrafo
 Engineered an automated, zero-trust deployment pipeline.
 - **Dockerization:** Wrote multi-stage Dockerfiles optimizing build caching and reducing the final production image footprint by over 60%.
 - **OIDC Authentication:** Configured GitHub Actions to assume temporary AWS IAM roles via OpenID Connect, eliminating long-lived credentials from repository secrets.
-- **Automated Pipeline:** Structured a strict quality gate pipeline (Test → Build → Push) that tags images with immutable git-SHAs and pushes them to Amazon ECR.
+- **Automated Pipeline:** Structured a strict quality gate pipeline (Test → Build → Push → Deploy) that tags images with immutable git-SHAs, pushes them to Amazon ECR, then runs an Ansible playbook (SSH via the bastion) to pull and run the new image on the app server.
 
 ---
 
@@ -65,14 +65,16 @@ This project is being developed in iterative phases to mimic a real-world enterp
 │   └── ...
 └── terraform/
     ├── environments/
-    │   └── dev/                  # Environment-specific configuration and state
+    │   └── dev/                  # Sole environment entry point (calls the shared modules)
     └── modules/
         ├── compute/              # Bastion, App instances, ALB
-        ├── data/                 # RDS Postgres, ECR, S3
+        ├── data/                 # RDS Postgres, ECR
         ├── networking/           # VPC, Subnets, IGW, NAT
         └── security-groups/      # Stateful firewall rules
 
 ```
+
+`terraform/environments/dev` is the only environment wired up right now — run all Terraform commands from there. A `prod` environment will be added the same way (reusing the shared modules) when it's actually needed.
 
 ---
 
@@ -100,5 +102,9 @@ terraform apply tfplan
 
 ### CI/CD Pipeline
 
-The GitHub Actions workflow triggers automatically on pushes and pull requests to the `main` branch. It executes local tests, builds the Docker image utilizing the GitHub Actions cache (`type=gha`), authenticates to AWS via OIDC, and pushes the immutable artifact to ECR.
+The GitHub Actions workflow triggers automatically on pushes and pull requests to the `main` branch. It executes local tests, builds the Docker image utilizing the GitHub Actions cache (`type=gha`), authenticates to AWS via OIDC, and pushes the immutable artifact to ECR. On a push (not PRs), a final `deploy` job runs the Ansible `app_servers` playbook over SSH via the bastion to pull and run the new image on the app server.
+
+The deploy job needs one additional repository secret beyond `ECR_REPOSITORY_URL` and `AWS_ACCOUNT_ID`:
+
+- `BASTION_SSH_PRIVATE_KEY` — the private half of the `gitops-platform` key pair registered in the `iam` module, used to SSH-proxy through the bastion to the private app server.
 

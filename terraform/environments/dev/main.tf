@@ -36,6 +36,8 @@ module "compute" {
 }
 
 module "data" {
-  source       = "../../modules/data"
-  project_name = var.project_name
+  source          = "../../modules/data"
+  project_name    = var.project_name
+  data_subnet_ids = module.networking.data_subnet_ids
+  db_sg_id        = module.security_groups.db_sg_id
 }
