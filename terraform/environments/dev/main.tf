@@ -16,9 +16,9 @@ module "security_groups" {
 }
 
 module "compute_iam" {
-  source              = "../../modules/compute-iam"
-  project_name        = var.project_name
-  ssh_public_key_path = var.ssh_public_key_path
+  source         = "../../modules/compute-iam"
+  project_name   = var.project_name
+  ssh_public_key = var.ssh_public_key
 }
 
 module "compute" {

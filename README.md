@@ -123,6 +123,11 @@ A second workflow ([`terraform.yml`](.github/workflows/terraform.yml)) plans and
 - **Any PR touching the `dev` environment or the modules it uses** runs `terraform plan` using a **read-only** OIDC role (`gitops-platform-tf-plan-role`) and posts the plan as a PR comment — safe even on a PR from a fork, since it can't change anything. Changes to `foundation` are applied manually (see below) and aren't part of this pipeline.
 - **A push to `main`** re-runs that same read-only plan, uploads it as an artifact, then a second job downloads it and runs `terraform apply` on the *exact* reviewed plan using a separate, more privileged OIDC role (`gitops-platform-tf-apply-role`). That job targets the `dev` GitHub Environment, which requires manual approval before it's allowed to run — merging to `main` never silently changes infrastructure.
 
+Since Terraform now runs on a GitHub Actions runner instead of your laptop, two values that used to come from your local machine have to come from repo config instead:
+
+- `SSH_PUBLIC_KEY` (**repository variable**, not secret — it's a public key) — the contents of `~/.ssh/gitops-platform.pub`. The `aws_key_pair` resource used to read this from a local file path via `file()`, which doesn't exist on a CI runner.
+- `ADMIN_IP` (**repository secret**) — your IP in `x.x.x.x/32` form, for the bastion's SSH ingress rule. This used to be fetched live via an HTTP call to whatever machine ran `terraform apply` — harmless locally, but in CI that machine is a GitHub-hosted runner with a random, constantly-changing IP, which would have silently locked the bastion to the wrong address on every run.
+
 ### Ephemeral Dev Environment
 
 This is a learning project — there's no reason to pay for a VPC/NAT/ALB/RDS that sits idle. The `dev` environment (network, compute, database) is designed to be destroyed and recreated on demand, while `foundation` (CI roles, ECR) stays up permanently so tearing `dev` down never breaks the pipeline.

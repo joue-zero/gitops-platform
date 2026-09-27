@@ -14,6 +14,8 @@ on:
 env:
   AWS_REGION: ${{ vars.AWS_REGION }}
   TF_WORKING_DIR: terraform/environments/dev
+  TF_VAR_ssh_public_key: ${{ vars.SSH_PUBLIC_KEY }}
+  TF_VAR_my_ip: ${{ secrets.ADMIN_IP }}
 
 jobs:
   run:

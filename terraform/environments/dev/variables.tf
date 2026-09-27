@@ -21,10 +21,9 @@ variable "vpc_cidr" {
   default = "10.0.0.0/16"
 }
 
-variable "ssh_public_key_path" {
-  description = "Path to SSH public key to register with AWS"
+variable "ssh_public_key" {
+  description = "SSH public key contents to register with AWS (not a path — a local path doesn't exist when this runs in CI)"
   type        = string
-  default     = "~/.ssh/gitops-platform.pub"
 }
 
 variable "my_ip" {
