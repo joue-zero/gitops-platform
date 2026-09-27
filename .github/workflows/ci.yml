@@ -78,9 +78,13 @@ jobs:
           context: ./app
           file: ./app/Dockerfile
           push: ${{ github.event_name == 'push' || github.event_name == 'workflow_dispatch' }}   # push on merge or manual run, not PR
-          tags: |
-            ${{ env.ECR_REPOSITORY }}:${{ github.sha }}
-            ${{ env.ECR_REPOSITORY }}:latest
+          # Only the immutable SHA tag — the repo has
+          # image_tag_mutability = IMMUTABLE, so a rolling `:latest`
+          # tag can never be re-pushed after the first build ever
+          # creates it. The deploy step always pins an exact SHA
+          # anyway, so `:latest` was dead weight that broke every
+          # build after the first.
+          tags: ${{ env.ECR_REPOSITORY }}:${{ github.sha }}
           cache-from: type=gha                        # GitHub Actions layer cache
           cache-to:   type=gha,mode=max
 
