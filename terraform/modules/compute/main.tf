@@ -65,7 +65,7 @@ resource "aws_lb_target_group" "app" {
   vpc_id   = var.vpc_id
 
   health_check {
-    path                = "/"
+    path                = "/health" # the app only ever defines /health, not /
     interval            = 30
     healthy_threshold   = 2
     unhealthy_threshold = 3
