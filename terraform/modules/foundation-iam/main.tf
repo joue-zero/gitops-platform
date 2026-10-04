@@ -159,6 +159,37 @@ data "aws_iam_policy_document" "tf_apply_eks" {
   }
 }
 
+# RDS creates and encrypts the managed master-user secret on the caller's behalf, so the caller
+# needs these. Scoped to the AWS-managed Secrets Manager key and to RDS-owned ("rds!") secrets.
+data "aws_region" "current" {}
+
+data "aws_kms_key" "secretsmanager" {
+  key_id = "alias/aws/secretsmanager"
+}
+
+data "aws_iam_policy_document" "tf_apply_rds_secret" {
+  statement {
+    actions   = ["kms:DescribeKey", "kms:CreateGrant", "kms:GenerateDataKey", "kms:Decrypt"]
+    resources = [data.aws_kms_key.secretsmanager.arn]
+  }
+
+  statement {
+    actions = [
+      "secretsmanager:CreateSecret",
+      "secretsmanager:TagResource",
+      "secretsmanager:DescribeSecret",
+      "secretsmanager:DeleteSecret",
+    ]
+    resources = ["arn:aws:secretsmanager:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:secret:rds!*"]
+  }
+}
+
+resource "aws_iam_role_policy" "tf_apply_rds_secret" {
+  name   = "RdsManagedSecret"
+  role   = aws_iam_role.github_actions_tf_apply.name
+  policy = data.aws_iam_policy_document.tf_apply_rds_secret.json
+}
+
 resource "aws_iam_role_policy" "tf_apply_eks" {
   name   = "ManageEks"
   role   = aws_iam_role.github_actions_tf_apply.name
