@@ -67,6 +67,7 @@ jobs:
       - name: Terraform Plan
         id: plan
         working-directory: ${{ env.TF_WORKING_DIR }}
+        shell: bash # adds pipefail, so a failed plan is not masked by tee
         run: terraform plan -out=tfplan -input=false -no-color | tee plan_output.txt
 
       - name: Comment plan on PR
