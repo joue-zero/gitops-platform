@@ -12,6 +12,7 @@ on:
       - 'terraform/modules/data/**'
       - 'terraform/modules/eks/**'
       - 'terraform/modules/lb-controller/**'
+      - 'terraform/modules/argocd/**'
       - '.github/workflows/terraform.yml'
   push:
     branches: [main]
@@ -24,6 +25,7 @@ on:
       - 'terraform/modules/data/**'
       - 'terraform/modules/eks/**'
       - 'terraform/modules/lb-controller/**'
+      - 'terraform/modules/argocd/**'
       - '.github/workflows/terraform.yml'
 
 env:

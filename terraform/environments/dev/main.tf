@@ -77,3 +77,11 @@ module "lb_controller" {
   oidc_provider_arn = module.eks.oidc_provider_arn
   oidc_provider_url = module.eks.oidc_provider_url
 }
+
+# Applied last and destroyed first, so the controller outlives the Ingresses Argo CD manages.
+module "argocd" {
+  source          = "../../modules/argocd"
+  gitops_repo_url = var.gitops_repo_url
+
+  depends_on = [module.eks, module.lb_controller]
+}

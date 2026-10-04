@@ -33,3 +33,7 @@ output "eks_cluster_endpoint" {
 output "eks_oidc_provider_arn" {
   value = module.eks.oidc_provider_arn
 }
+
+output "argocd_namespace" {
+  value = module.argocd.namespace
+}
