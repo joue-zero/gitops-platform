@@ -67,3 +67,13 @@ module "eks" {
   admin_principal_arns  = concat([local.tf_apply_role_arn], local.eks_extra_admins)
   viewer_principal_arns = [local.tf_plan_role_arn]
 }
+
+module "lb_controller" {
+  source            = "../../modules/lb-controller"
+  project_name      = var.project_name
+  cluster_name      = module.eks.cluster_name
+  vpc_id            = module.networking.vpc_id
+  region            = var.aws_region
+  oidc_provider_arn = module.eks.oidc_provider_arn
+  oidc_provider_url = module.eks.oidc_provider_url
+}

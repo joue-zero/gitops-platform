@@ -21,8 +21,10 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = true
 
   tags = {
-    Name = "${var.project_name}-public-${count.index + 1}"
-    Tier = "public"
+    Name                                            = "${var.project_name}-public-${count.index + 1}"
+    Tier                                            = "public"
+    "kubernetes.io/role/elb"                        = "1"
+    "kubernetes.io/cluster/${var.project_name}-eks" = "shared" # must match the EKS cluster name
   }
 }
 
@@ -33,8 +35,10 @@ resource "aws_subnet" "private" {
   availability_zone = data.aws_availability_zones.available.names[count.index]
 
   tags = {
-    Name = "${var.project_name}-private-${count.index + 1}"
-    Tier = "private"
+    Name                                            = "${var.project_name}-private-${count.index + 1}"
+    Tier                                            = "private"
+    "kubernetes.io/role/internal-elb"               = "1"
+    "kubernetes.io/cluster/${var.project_name}-eks" = "shared" # must match the EKS cluster name
   }
 }
 

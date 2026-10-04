@@ -6,6 +6,10 @@ terraform {
       source  = "hashicorp/aws"
       version = ">=6.45.0"
     }
+    helm = {
+      source  = "hashicorp/helm"
+      version = "~> 3.0"
+    }
   }
 
   backend "s3" {
@@ -31,6 +35,20 @@ provider "aws" {
       Environment = var.environment
       ManagedBy   = "terraform"
       Owner       = "joe"
+    }
+  }
+}
+
+# Short-lived token from the AWS CLI (AWS_PROFILE locally, OIDC credentials in CI); no kubeconfig stored.
+provider "helm" {
+  kubernetes = {
+    host                   = module.eks.cluster_endpoint
+    cluster_ca_certificate = base64decode(module.eks.cluster_certificate_authority_data)
+
+    exec = {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      command     = "aws"
+      args        = ["eks", "get-token", "--cluster-name", module.eks.cluster_name, "--region", var.aws_region]
     }
   }
 }
