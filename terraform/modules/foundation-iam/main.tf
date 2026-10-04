@@ -195,3 +195,40 @@ resource "aws_iam_role_policy" "tf_apply_eks" {
   role   = aws_iam_role.github_actions_tf_apply.name
   policy = data.aws_iam_policy_document.tf_apply_eks.json
 }
+
+# ── CI: terraform apply for foundation (push to main, no approval gate) ─────
+data "aws_iam_policy_document" "github_assume_foundation_apply" {
+  statement {
+    actions = ["sts:AssumeRoleWithWebIdentity"]
+    principals {
+      type        = "Federated"
+      identifiers = [aws_iam_openid_connect_provider.github.arn]
+    }
+    condition {
+      test     = "StringEquals"
+      variable = "token.actions.githubusercontent.com:sub"
+      values   = ["repo:joue-zero/gitops-platform:ref:refs/heads/main"] # never PRs
+    }
+  }
+}
+
+resource "aws_iam_role" "github_actions_foundation_apply" {
+  name               = "${var.project_name}-foundation-apply-role"
+  assume_role_policy = data.aws_iam_policy_document.github_assume_foundation_apply.json
+}
+
+# Foundation holds only IAM, the OIDC provider and ECR.
+resource "aws_iam_role_policy_attachment" "foundation_apply" {
+  for_each = toset([
+    "arn:aws:iam::aws:policy/IAMFullAccess",
+    "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess",
+  ])
+  role       = aws_iam_role.github_actions_foundation_apply.name
+  policy_arn = each.value
+}
+
+resource "aws_iam_role_policy" "foundation_apply_state" {
+  name   = "TerraformState"
+  role   = aws_iam_role.github_actions_foundation_apply.name
+  policy = data.aws_iam_policy_document.tf_state_lock.json
+}

@@ -71,10 +71,10 @@ This project is being developed in iterative phases to mimic a real-world enterp
 │   └── scripts/validate-chart.sh # The chart gate, identical locally and in CI
 └── terraform/
     ├── environments/
-    │   ├── foundation/           # Persistent: OIDC, CI roles, ECR. Applied once, manually.
+    │   ├── foundation/           # Persistent: OIDC, CI roles, ECR. Applied by CI on merge.
     │   └── dev/                  # Ephemeral: VPC, compute, RDS. Destroyed/recreated freely.
     └── modules/
-        ├── foundation-iam/       # OIDC provider, CI roles (github, tf-plan, tf-apply)
+        ├── foundation-iam/       # OIDC provider, CI roles (github, tf-plan, tf-apply, foundation-apply)
         ├── ecr/                  # App image registry
         ├── compute-iam/          # SSH key pair, EC2 instance role
         ├── compute/              # Bastion, App instances, ALB
@@ -131,7 +131,7 @@ The deploy job needs one additional repository secret beyond `ECR_REPOSITORY_URL
 
 A second workflow ([`terraform.yml`](.github/workflows/terraform.yml)) plans and applies infrastructure changes:
 
-- **Any PR touching the `dev` environment or the modules it uses** runs `terraform plan` using a **read-only** OIDC role (`gitops-platform-tf-plan-role`) and posts the plan as a PR comment — safe even on a PR from a fork, since it can't change anything. Changes to `foundation` are applied manually (see below) and aren't part of this pipeline.
+- **Any PR touching the `dev` environment or the modules it uses** runs `terraform plan` using a **read-only** OIDC role (`gitops-platform-tf-plan-role`) and posts the plan as a PR comment — safe even on a PR from a fork, since it can't change anything. Changes to `foundation` have their own pipeline (`terraform-foundation.yml`): plan on the PR, apply on merge to `main` with no approval gate, using a role that only trusts `main`.
 - **A push to `main`** re-runs that same read-only plan, uploads it as an artifact, then a second job downloads it and runs `terraform apply` on the *exact* reviewed plan using a separate, more privileged OIDC role (`gitops-platform-tf-apply-role`). That job targets the `dev` GitHub Environment, which requires manual approval before it's allowed to run — merging to `main` never silently changes infrastructure.
 
 Since Terraform now runs on a GitHub Actions runner instead of your laptop, two values that used to come from your local machine have to come from repo config instead:
@@ -165,7 +165,7 @@ Verified on a real cluster: the pods run under the `restricted` Pod Security pro
 
 Before relying on it:
 
-1. Re-apply `foundation` by hand (done once; needed again only if its code changes).
+1. `foundation` is applied by CI on merge; by hand only for the first bootstrap or to recover a broken role.
 2. Add a `GITOPS_CONFIG_TOKEN` repository secret: a fine-grained token with *Contents: read and write* on `gitops-platform-config` only. Without it the `update-gitops` job fails with a clear message.
 3. Optionally set the `EKS_ADMIN_PRINCIPALS` repository variable (comma-separated IAM ARNs) to use `kubectl` on a CI-created cluster.
 
