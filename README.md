@@ -45,8 +45,8 @@ This project is being developed in iterative phases to mimic a real-world enterp
 - [x] **Phase 1:** AWS Infrastructure Foundation (Terraform)
 - [x] **Phase 2:** Containerization & Continuous Integration (Docker, GH Actions, ECR)
 - [x] **Phase 2.5:** Ephemeral Dev Environment (foundation/environment state split, on-demand + scheduled destroy)
-- [ ] **Phase 3:** Kubernetes on EKS (Provisioning cluster, deploying via Helm)
-- [ ] **Phase 4:** GitOps Continuous Delivery (Decoupling CI/CD with ArgoCD)
+- [ ] **Phase 3:** Kubernetes on EKS (Provisioning cluster, deploying via Helm) — *built and verified on a real cluster; EC2 path not removed yet*
+- [ ] **Phase 4:** GitOps Continuous Delivery (Decoupling CI/CD with ArgoCD) — *built and verified on a real cluster*
 - [ ] **Phase 5:** Observability Stack (Metrics and log aggregation via Prometheus/Grafana)
 - [ ] **Phase 6:** DevSecOps (Integrating Trivy image scanning and Checkov IaC analysis)
 - [ ] **Phase 7:** Platform Polish & Cost Optimization
@@ -59,11 +59,16 @@ This project is being developed in iterative phases to mimic a real-world enterp
 .
 ├── .github/
 │   └── workflows/
-│       └── ci.yml                # CI pipeline (Test, Build, Push to ECR)
+│       ├── ci.yml                # App pipeline (Test, Build, Push to ECR, Deploy)
+│       ├── helm-chart.yml        # Chart quality gate (lint, schema, kube-score)
+│       └── terraform*.yml        # Plan/apply, manual up/down, nightly destroy
 ├── app/                          # Application source code
 │   ├── Dockerfile                # Multi-stage production container
 │   ├── docker-compose.yml        # Local development environment
 │   └── ...
+├── helm/
+│   ├── app/                      # Hardened Helm chart for the app (see its README)
+│   └── scripts/validate-chart.sh # The chart gate, identical locally and in CI
 └── terraform/
     ├── environments/
     │   ├── foundation/           # Persistent: OIDC, CI roles, ECR. Applied once, manually.
@@ -73,6 +78,9 @@ This project is being developed in iterative phases to mimic a real-world enterp
         ├── ecr/                  # App image registry
         ├── compute-iam/          # SSH key pair, EC2 instance role
         ├── compute/              # Bastion, App instances, ALB
+        ├── eks/                  # EKS cluster, managed node group, access entries, VPC CNI add-on, IRSA OIDC
+        ├── lb-controller/        # AWS Load Balancer Controller + its IRSA role
+        ├── argocd/               # Argo CD + root app-of-apps, installed by Terraform
         ├── data/                 # RDS Postgres
         ├── networking/           # VPC, Subnets, IGW, NAT
         └── security-groups/      # Stateful firewall rules
@@ -142,6 +150,26 @@ Three ways it gets torn down or spun up:
 - **Automatically every night** — [`terraform-nightly-destroy.yml`](.github/workflows/terraform-nightly-destroy.yml) tears it down on a schedule, **unattended, without the approval gate** — that's deliberate: a safety net for forgetting only works if it doesn't wait for you to approve it. It no-ops harmlessly if the environment's already down.
 
 Caveat worth knowing: RDS is created with `skip_final_snapshot = true`, so **every teardown deletes the database with no backup**. Fine for a learning environment with disposable data; not a pattern to carry into anything real.
+
+### Kubernetes and GitOps (in progress)
+
+The EC2 path is being replaced by Kubernetes in stages; it stays live until the new path is proven.
+
+- **Cluster:** `terraform/modules/eks` creates the EKS control plane and a managed node group. Access is only through EKS access entries (CI apply role as admin, CI plan role read-only, plus `EKS_ADMIN_PRINCIPALS`); the creator is not an implicit admin. The VPC CNI add-on enforces NetworkPolicy.
+- **Ingress:** the AWS Load Balancer Controller (`terraform/modules/lb-controller`, IRSA) turns the chart's Ingress into an internet-facing ALB. It is installed by Terraform, not Argo CD, so it is destroyed after the apps and can still delete their load balancers.
+- **Packaging:** [`helm/app`](helm/app) is a hardened chart, gated in CI by [`helm-chart.yml`](.github/workflows/helm-chart.yml).
+- **Delivery:** Terraform installs Argo CD and a root Application right after the cluster. Argo CD reads [`gitops-platform-config`](https://github.com/joue-zero/gitops-platform-config) (app, metrics-server for the HPA), so a recreated environment rebuilds itself from Git.
+- **Releases:** after each image push, the `update-gitops` job in [`ci.yml`](.github/workflows/ci.yml) commits the new image tag to the config repo, and Argo CD rolls it out. A rollback is a `git revert` there.
+
+Verified on a real cluster: the pods run under the `restricted` Pod Security profile, a release and a rollback through Git each take seconds, manual drift is reverted, the HPA reads metrics, NetworkPolicy blocks outbound traffic while allowing DNS, and the ALB serves `/health` from the internet.
+
+Before relying on it:
+
+1. Re-apply `foundation` by hand (done once; needed again only if its code changes).
+2. Add a `GITOPS_CONFIG_TOKEN` repository secret: a fine-grained token with *Contents: read and write* on `gitops-platform-config` only. Without it the `update-gitops` job fails with a clear message.
+3. Optionally set the `EKS_ADMIN_PRINCIPALS` repository variable (comma-separated IAM ARNs) to use `kubectl` on a CI-created cluster.
+
+Then remove the EC2 path (`compute`, the `nginx`/`docker`/`app-deploy` Ansible roles, the CI deploy job) in one separate change.
 
 ### Branching Strategy
 

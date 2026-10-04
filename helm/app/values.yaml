@@ -1,0 +1,133 @@
+# Environment overrides live in the gitops-platform-config repository.
+
+replicaCount: 2
+
+image:
+  repository: "" # required
+  tag: "" # defaults to Chart.appVersion; releases pin the git SHA
+  pullPolicy: IfNotPresent # tags are immutable
+
+nameOverride: ""
+fullnameOverride: ""
+
+containerPort: 8080
+
+# Non-secret environment variables, rendered into a ConfigMap.
+config:
+  NODE_ENV: production
+
+# Name of an existing Secret to inject with envFrom. The chart never creates Secrets.
+existingSecret: ""
+
+serviceAccount:
+  create: true
+  automount: false # the app never calls the Kubernetes API
+  annotations: {} # e.g. eks.amazonaws.com/role-arn for IRSA
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+# runAsUser is numeric because the image's `USER node` is a name the kubelet cannot check.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+service:
+  type: ClusterIP
+  port: 80
+
+ingress:
+  enabled: false
+  className: "" # e.g. alb
+  annotations: {}
+  hosts:
+    - host: "" # empty matches every host
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+    ephemeral-storage: 64Mi
+  limits:
+    cpu: 250m
+    memory: 128Mi
+    ephemeral-storage: 256Mi
+
+startupProbe:
+  httpGet:
+    path: /health
+    port: http
+  periodSeconds: 3
+  failureThreshold: 20
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 10
+  periodSeconds: 15
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /health
+    port: http
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# Pause so load balancers stop sending traffic before SIGTERM arrives.
+lifecycle:
+  preStop:
+    exec:
+      command: ["sleep", "5"]
+
+strategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+revisionHistoryLimit: 3
+
+autoscaling:
+  enabled: false # needs metrics-server
+  minReplicas: 2
+  maxReplicas: 4
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: null
+
+podDisruptionBudget:
+  enabled: true
+  maxUnavailable: 1
+
+topologySpread:
+  enabled: true # soft spread across zones and nodes
+  maxSkew: 1
+
+networkPolicy:
+  enabled: true # enforced only if the CNI supports it (VPC CNI network policy support)
+  ingressFrom: [] # empty allows any source on the container port
+  extraEgress: [] # egress is otherwise limited to cluster DNS
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+testImage: public.ecr.aws/docker/library/busybox:1.37 # ECR Public avoids Docker Hub rate limits

@@ -1,0 +1,60 @@
+# Every optional feature enabled, so CI renders and validates all templates.
+replicaCount: 3
+image:
+  repository: 123456789012.dkr.ecr.eu-central-1.amazonaws.com/gitops-platform/app
+  tag: 0123456789abcdef0123456789abcdef01234567
+config:
+  NODE_ENV: production
+  LOG_LEVEL: info
+existingSecret: app-credentials
+serviceAccount:
+  annotations:
+    eks.amazonaws.com/role-arn: arn:aws:iam::123456789012:role/example
+ingress:
+  enabled: true
+  className: alb
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/healthcheck-path: /health
+  hosts:
+    - host: app.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+    - paths:
+        - path: /health
+          pathType: Exact
+  tls:
+    - hosts:
+        - app.example.com
+      secretName: app-example-com-tls
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+networkPolicy:
+  enabled: true
+  ingressFrom:
+    - ipBlock:
+        cidr: 10.0.0.0/16
+  extraEgress:
+    - to:
+        - ipBlock:
+            cidr: 10.0.20.0/22
+      ports:
+        - port: 5432
+          protocol: TCP
+podAnnotations:
+  example.com/annotation: "true"
+podLabels:
+  example.com/label: "true"
+nodeSelector:
+  kubernetes.io/os: linux
+tolerations:
+  - key: dedicated
+    operator: Equal
+    value: app
+    effect: NoSchedule

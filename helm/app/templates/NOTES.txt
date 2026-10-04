@@ -1,0 +1,18 @@
+{{ include "gitops-app.fullname" . }} {{ .Chart.Version }} deployed with image {{ include "gitops-app.image" . }}.
+
+{{- if .Values.ingress.enabled }}
+
+The Ingress is enabled. Find the load balancer address with:
+
+  kubectl get ingress {{ include "gitops-app.fullname" . }} --namespace {{ .Release.Namespace }}
+{{- else }}
+
+No Ingress is configured. Reach the service locally with:
+
+  kubectl port-forward --namespace {{ .Release.Namespace }} svc/{{ include "gitops-app.fullname" . }} 8080:{{ .Values.service.port }}
+  curl http://localhost:8080/health
+{{- end }}
+
+Run the smoke test with:
+
+  helm test {{ .Release.Name }} --namespace {{ .Release.Namespace }}

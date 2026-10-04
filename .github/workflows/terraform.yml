@@ -10,6 +10,9 @@ on:
       - 'terraform/modules/compute/**'
       - 'terraform/modules/compute-iam/**'
       - 'terraform/modules/data/**'
+      - 'terraform/modules/eks/**'
+      - 'terraform/modules/lb-controller/**'
+      - 'terraform/modules/argocd/**'
       - '.github/workflows/terraform.yml'
   push:
     branches: [main]
@@ -20,6 +23,9 @@ on:
       - 'terraform/modules/compute/**'
       - 'terraform/modules/compute-iam/**'
       - 'terraform/modules/data/**'
+      - 'terraform/modules/eks/**'
+      - 'terraform/modules/lb-controller/**'
+      - 'terraform/modules/argocd/**'
       - '.github/workflows/terraform.yml'
 
 env:
@@ -29,6 +35,7 @@ env:
   # come from repo config instead of a file path / live IP lookup.
   TF_VAR_ssh_public_key: ${{ vars.SSH_PUBLIC_KEY }}
   TF_VAR_my_ip: ${{ secrets.ADMIN_IP }}
+  TF_VAR_eks_admin_principals: ${{ vars.EKS_ADMIN_PRINCIPALS }}
 
 jobs:
   plan:
@@ -60,6 +67,7 @@ jobs:
       - name: Terraform Plan
         id: plan
         working-directory: ${{ env.TF_WORKING_DIR }}
+        shell: bash # adds pipefail, so a failed plan is not masked by tee
         run: terraform plan -out=tfplan -input=false -no-color | tee plan_output.txt
 
       - name: Comment plan on PR

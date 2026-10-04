@@ -32,3 +32,21 @@ variable "my_ip" {
   sensitive   = true
   # No default — must be set in tfvars. Never 0.0.0.0/0
 }
+
+variable "eks_admin_principals" {
+  description = "Comma-separated IAM user/role ARNs granted cluster-admin on the EKS cluster, in addition to the CI apply role. Empty means only the CI role."
+  type        = string
+  default     = ""
+}
+
+variable "gitops_repo_url" {
+  description = "Git repository Argo CD watches for Application manifests and per-environment values"
+  type        = string
+  default     = "https://github.com/joue-zero/gitops-platform-config.git"
+}
+
+variable "eks_node_instance_types" {
+  description = "Instance types for the EKS worker nodes. Must be x86_64 (the image is built for amd64). t3.small is free-tier eligible and fits the current workload."
+  type        = list(string)
+  default     = ["t3.small"]
+}
