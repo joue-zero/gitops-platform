@@ -150,3 +150,17 @@ resource "aws_iam_role_policy_attachment" "tf_apply" {
   role       = aws_iam_role.github_actions_tf_apply.name
   policy_arn = each.value
 }
+
+# No managed full-access policy exists for EKS. eks:* on * is deliberate: the role already has IAMFullAccess.
+data "aws_iam_policy_document" "tf_apply_eks" {
+  statement {
+    actions   = ["eks:*"]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_role_policy" "tf_apply_eks" {
+  name   = "ManageEks"
+  role   = aws_iam_role.github_actions_tf_apply.name
+  policy = data.aws_iam_policy_document.tf_apply_eks.json
+}
