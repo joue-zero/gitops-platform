@@ -1,0 +1,47 @@
+name: Helm chart — lint and validate
+
+on:
+  pull_request:
+    paths:
+      - 'helm/**'
+      - '.github/workflows/helm-chart.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'helm/**'
+      - '.github/workflows/helm-chart.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: helm-chart-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  HELM_VERSION: v4.3.0
+  KUBECONFORM_VERSION: v0.8.0
+  KUBE_SCORE_VERSION: 1.20.0
+
+jobs:
+  validate:
+    name: Lint, schema-validate and score the chart
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: ${{ env.HELM_VERSION }}
+
+      - name: Install kubeconform and kube-score
+        run: |
+          mkdir -p "$HOME/.local/bin"
+          curl -sSfL "https://github.com/yannh/kubeconform/releases/download/${KUBECONFORM_VERSION}/kubeconform-linux-amd64.tar.gz" \
+            | tar xz -C "$HOME/.local/bin" kubeconform
+          curl -sSfL "https://github.com/zegl/kube-score/releases/download/v${KUBE_SCORE_VERSION}/kube-score_${KUBE_SCORE_VERSION}_linux_amd64.tar.gz" \
+            | tar xz -C "$HOME/.local/bin" kube-score
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Validate chart
+        run: helm/scripts/validate-chart.sh

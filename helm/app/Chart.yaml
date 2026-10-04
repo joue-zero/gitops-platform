@@ -1,0 +1,14 @@
+apiVersion: v2
+name: gitops-app
+description: Helm chart for the gitops-platform Node.js health-check service
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.29.0-0" # "-0" lets vendor builds such as v1.33.5-eks-abc123 match
+home: https://github.com/joue-zero/gitops-platform
+sources:
+  - https://github.com/joue-zero/gitops-platform/tree/main/app
+keywords:
+  - nodejs
+  - express
+  - gitops

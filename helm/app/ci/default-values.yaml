@@ -1,0 +1,4 @@
+# Minimal values used by CI: only the one required setting.
+image:
+  repository: 123456789012.dkr.ecr.eu-central-1.amazonaws.com/gitops-platform/app
+  tag: 0123456789abcdef0123456789abcdef01234567
