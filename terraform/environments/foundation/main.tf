@@ -3,9 +3,8 @@
 # ECR repo (so image history and the ECR_REPOSITORY_URL secret stay
 # stable across dev environment teardown/recreate cycles).
 #
-# Applied manually, not via CI — CI's own permission to run terraform
-# comes from the roles this config creates, so this layer can't
-# bootstrap itself.
+# Applied by CI on merge (terraform-foundation.yml) once the foundation-apply role exists.
+# The first apply, and any recovery from a broken role, is done by hand.
 
 module "foundation_iam" {
   source       = "../../modules/foundation-iam"
